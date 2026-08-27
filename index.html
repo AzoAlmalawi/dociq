@@ -10,6 +10,242 @@
   <script>
 
     // ==============================================================
+    // STEP 3 INTERACTIVE KINETICS & STATE ENGINE
+    // ==============================================================
+    window.docPatchState = {
+      appliedLabs: false,
+      appliedAco: false,
+      appliedPlan: false
+    };
+
+    window.updateQualityGauge = function(score) {
+      const targetScore = Math.min(Math.max(Number(score) || 68, 0), 100);
+      
+      // Update Number
+      const numEl = document.getElementById('qualityScoreDisplay');
+      if (numEl) numEl.innerText = targetScore + '%';
+
+      // Animate SVG Arc (Circumference: 2 * PI * 40 ≈ 251.32)
+      const arcEl = document.getElementById('qualityGaugeArc');
+      if (arcEl) {
+        const circumference = 251.32;
+        const offset = circumference * (1 - targetScore / 100);
+        arcEl.style.strokeDashoffset = offset;
+
+        if (targetScore < 75) {
+          arcEl.setAttribute('stroke', '#D97706'); // Amber
+        } else if (targetScore >= 75 && targetScore < 90) {
+          arcEl.setAttribute('stroke', '#0D9488'); // Teal
+        } else {
+          arcEl.setAttribute('stroke', '#059669'); // Emerald
+        }
+      }
+
+      // Update Status Badge
+      const badgeEl = document.getElementById('qualityStatusBadge');
+      if (badgeEl) {
+        if (targetScore < 75) {
+          badgeEl.innerText = `${targetScore}% (Needs Attention)`;
+          badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 transition-all';
+        } else if (targetScore >= 75 && targetScore < 90) {
+          badgeEl.innerText = `${targetScore}% (In Review / Partial)`;
+          badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200 transition-all';
+        } else {
+          badgeEl.innerText = `${targetScore}% (Excellent / Compliant)`;
+          badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all';
+        }
+      }
+
+      // Update Points Table
+      const ptsComp = document.getElementById('ptsCompleteness');
+      const ptsPrec = document.getElementById('ptsPrecision');
+      const ptsCons = document.getElementById('ptsConsistency');
+      const ptsTot = document.getElementById('ptsTotal');
+
+      if (ptsComp && ptsPrec && ptsCons && ptsTot) {
+        if (targetScore <= 68) {
+          ptsComp.innerText = '29.09 pts (8/11)';
+          ptsPrec.innerText = '13.00 pts';
+          ptsCons.innerText = '12.00 pts';
+          ptsTot.innerText = '68.00 / 100';
+        } else if (targetScore <= 78) {
+          ptsComp.innerText = '36.36 pts (10/11)';
+          ptsPrec.innerText = '18.00 pts';
+          ptsCons.innerText = '14.00 pts';
+          ptsTot.innerText = '78.00 / 100';
+        } else if (targetScore <= 86) {
+          ptsComp.innerText = '36.36 pts (10/11)';
+          ptsPrec.innerText = '22.00 pts';
+          ptsCons.innerText = '16.00 pts';
+          ptsTot.innerText = '86.00 / 100';
+        } else {
+          ptsComp.innerText = '40.00 pts (11/11)';
+          ptsPrec.innerText = '25.00 pts';
+          ptsCons.innerText = '20.00 pts';
+          ptsTot.innerText = '92.00 / 100';
+        }
+      }
+    };
+
+    window.insertCernerLabs = function() {
+      const textarea = document.getElementById('soapNoteTextarea');
+      const labSnippet = "\n[Cerner LIS Biomarkers Aug 18: WBC 8.2 x10^9/L (from 14.1), CRP 6.5 mg/L (from 45.0), Procalcitonin 0.11 ng/mL]";
+      
+      if (textarea && !textarea.value.includes('Cerner LIS Biomarkers')) {
+        const objIdx = textarea.value.indexOf('ASSESSMENT & PLAN');
+        if (objIdx !== -1) {
+          textarea.value = textarea.value.slice(0, objIdx) + labSnippet + "\n\n" + textarea.value.slice(objIdx);
+        } else {
+          textarea.value += "\n" + labSnippet;
+        }
+      }
+
+      window.docPatchState.appliedLabs = true;
+      window.appScoreState.labAccepted = true;
+      window.updateGlobalScores();
+
+      // Transform Banner
+      const banner = document.getElementById('bannerLabs');
+      if (banner) {
+        banner.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      }
+      const btn = document.getElementById('btnInsertLabs');
+      if (btn) {
+        btn.innerHTML = '<span>INGESTED ✓ LOINC Biomarkers Linked</span>';
+        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btn.onclick = null;
+      }
+
+      logAuditMessage('Biomarker telemetry ingested from Cerner LIS (+10% Quality)');
+      showToast('Cerner LIS Biomarkers Ingested (+10% Quality)', 'success');
+    };
+
+    window.clarifyAcoSpecificity = function() {
+      const textarea = document.getElementById('soapNoteTextarea');
+      const acoSnippet = "Asthma-COPD Overlap (ACO) - ICD-10 J44.9 / J45.30";
+      
+      if (textarea) {
+        textarea.value = textarea.value.replace("Community-Acquired Pneumonia.", "Severe CAP in patient with " + acoSnippet + ".");
+      }
+
+      window.docPatchState.appliedAco = true;
+      window.appScoreState.acoAccepted = true;
+      window.updateGlobalScores();
+
+      // Transform Banner
+      const banner = document.getElementById('bannerAco');
+      if (banner) {
+        banner.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      }
+      const btn = document.getElementById('btnClarifyAco');
+      if (btn) {
+        btn.innerHTML = '<span>OPTIMIZED ✓ ICD-10 J44.9/J45.30 Specified</span>';
+        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btn.onclick = null;
+      }
+
+      logAuditMessage('Diagnosis specificity refined to Asthma-COPD Overlap (+8% Quality)');
+      showToast('Diagnosis Specificity Applied (+8% Quality)', 'success');
+    };
+
+    window.applyStewardshipPlan = function() {
+      const textarea = document.getElementById('soapNoteTextarea');
+      const planSnippet = "\n[ATS/IDSA Plan: Amox/Clav 875/125mg PO BID - 7-day target course]";
+      
+      if (textarea && !textarea.value.includes('ATS/IDSA Plan')) {
+        textarea.value += "\n" + planSnippet;
+      }
+
+      window.docPatchState.appliedPlan = true;
+      window.appScoreState.stewardshipAccepted = true;
+      window.updateGlobalScores();
+
+      // Transform Banner
+      const banner = document.getElementById('bannerPlan');
+      if (banner) {
+        banner.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      }
+      const btn = document.getElementById('btnApplyPlan');
+      if (btn) {
+        btn.innerHTML = '<span>VERIFIED ✓ ATS/IDSA Stewardship Target Set</span>';
+        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btn.onclick = null;
+      }
+
+      logAuditMessage('Antimicrobial stewardship plan validated (+6% Quality)');
+      showToast('ATS/IDSA Stewardship Plan Applied (+6% Quality)', 'success');
+    };
+
+    window.resetToRawDraft = function() {
+      window.docPatchState = {
+        appliedLabs: false,
+        appliedAco: false,
+        appliedPlan: false
+      };
+      window.appScoreState.labAccepted = false;
+      window.appScoreState.acoAccepted = false;
+      window.appScoreState.stewardshipAccepted = false;
+
+      const textarea = document.getElementById('soapNoteTextarea');
+      if (textarea) {
+        textarea.value = `SUBJECTIVE:\n71yo female admitted with fever, productive cough with rust-colored sputum, and worsening shortness of breath for 4 days. Known history of Asthma/COPD overlap (ACO).\n\nOBJECTIVE:\nVitals: BP 138/84, HR 102, RR 24, Temp 38.8C, SpO2 89% on RA.\nLungs: Crackles in right middle and lower lobes, bilateral expiratory wheezes.\n\nASSESSMENT & PLAN:\nAssessment: Community-Acquired Pneumonia.\nPlan: IV Ceftriaxone + Azithromycin, supplemental O2, monitoring.`;
+      }
+
+      // Reset Banners
+      const bLabs = document.getElementById('bannerLabs');
+      if (bLabs) bLabs.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2';
+      const btnL = document.getElementById('btnInsertLabs');
+      if (btnL) {
+        btnL.innerHTML = '<span>+ Insert Cerner LIS Biomarkers</span>';
+        btnL.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5';
+        btnL.onclick = window.insertCernerLabs;
+      }
+
+      const bAco = document.getElementById('bannerAco');
+      if (bAco) bAco.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2';
+      const btnA = document.getElementById('btnClarifyAco');
+      if (btnA) {
+        btnA.innerHTML = '<span>+ Clarify Comorbidity Specificity</span>';
+        btnA.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5';
+        btnA.onclick = window.clarifyAcoSpecificity;
+      }
+
+      const bPlan = document.getElementById('bannerPlan');
+      if (bPlan) bPlan.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2';
+      const btnP = document.getElementById('btnApplyPlan');
+      if (btnP) {
+        btnP.innerHTML = '<span>+ Apply ATS/IDSA Plan Target</span>';
+        btnP.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5';
+        btnP.onclick = window.applyStewardshipPlan;
+      }
+
+      window.updateGlobalScores();
+      logAuditMessage('Reset document to raw baseline physician draft (68% Quality)');
+      showToast('Reset to Raw Physician Draft (68% Quality)', 'info');
+    };
+
+    window.quickFillOptimalNote = function() {
+      window.insertCernerLabs();
+      window.clarifyAcoSpecificity();
+      window.applyStewardshipPlan();
+      logAuditMessage('Applied optimal clinical documentation bundle (92% Quality / 89% Research Readiness)');
+      showToast('Optimal Clinical Protocol Applied (92% Quality / 89% Research)', 'success');
+    };
+
+    function logAuditMessage(msg) {
+      const auditEl = document.getElementById('latestAuditLogText');
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+      if (auditEl) {
+        auditEl.innerText = `[${timeStr}] ${msg}`;
+      }
+      if (typeof appendClinicalAuditLog === 'function') {
+        appendClinicalAuditLog('CLINICAL_CDS_PATCH', msg, 'Dr. Mohammed (Attending)');
+      }
+    }
+
+
+    // ==============================================================
     // GLOBAL APP STATE & DYNAMIC BADGE SYNCHRONIZATION ENGINE
     // ==============================================================
     window.appScoreState = {
@@ -659,296 +895,220 @@
       </div>
 
       <!-- STEP 3: CLINICAL DOCUMENT (SOAP WORKSTATION) -->
-      <div id="screen-3" class="space-y-6 max-w-7xl mx-auto fade-in hidden">
-        <div class="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto pb-1">
-          <button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
-          <span>›</span>
-          <button onclick="navigateTo(2)" class="hover:text-teal-700">Step 2: Patient Record</button>
-          <span>›</span>
-          <span class="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-            Step 3: Clinical Document (EHR Note & Editor)
-          </span>
-          <span>›</span>
-          <button onclick="navigateTo(4)" class="hover:text-teal-700">Step 4: Clinical Review</button>
-        </div>
-
-        <div class="card-hospital p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-l-teal-700">
+      <!-- ============================================================== -->
+    <!-- STEP 3: CLINICAL DOCUMENT (SOAP WORKSTATION & ACTIVE PATCHES)  -->
+    <!-- ============================================================== -->
+    <div id="screen-3" class="space-y-6 max-w-6xl mx-auto fade-in" style="display: none;">
+      
+      <!-- Top Action Bar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </div>
           <div>
-            <div class="flex items-center gap-2.5">
-              <h2 class="text-xl font-bold text-slate-900">Clinical Progress Note & Step-Down Order</h2>
-              <span class="px-2 py-0.5 rounded text-xs font-bold badge-teal">Day 3 Inpatient</span>
-              <span id="autoSaveIndicator" class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 flex items-center gap-1">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>Auto-Saved • EHR Cache</span>
-              </span>
-            </div>
-            <p class="text-xs text-slate-500 mt-1">
-              Patient: <strong>Sarah Al-Otaibi (MRN: 882934)</strong> • Powered by strict <code>evaluateClinicalNote</code> PRD engine with dynamic two-way reactivity.
-            </p>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <button onclick="resetToRawDraft()" class="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold rounded-xl transition-all shadow-soft cursor-pointer flex items-center gap-1.5">
-              <span>↺ Reset to Draft (68%)</span>
-            </button>
-            <button onclick="quickFillOptimalNote()" class="px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold rounded-xl transition-all shadow-soft cursor-pointer flex items-center gap-1.5">
-              <span>⚡ Quick-Fill (92%)</span>
-            </button>
-            <button 
-              id="btnProceedStep4"
-              onclick="handleProceedStep4()" 
-              class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-soft flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <span>Step 4: Clinical Review →</span>
-            </button>
+            <h2 class="text-lg font-bold text-slate-900">Clinical Documentation Workstation</h2>
+            <p class="text-xs text-slate-500">Sarah Al-Otaibi • Female, 71 • Inpatient SOAP Note</p>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div class="lg:col-span-7 card-hospital p-6 space-y-6">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
-              <div class="flex items-center gap-1.5 text-xs text-slate-500 font-bold">
-                <span class="text-slate-900">Macros:</span>
-                <button onclick="insertMacro('.vitals')" class="px-2 py-1 rounded bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-[11px]">.vitals</button>
-                <button onclick="insertMacro('.labs')" class="px-2 py-1 rounded bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-[11px]">.labs</button>
-                <button onclick="insertMacro('.curb65')" class="px-2 py-1 rounded bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-[11px]">.curb65</button>
-                <button onclick="insertMacro('.stewardship')" class="px-2 py-1 rounded bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-[11px]">.stewardship</button>
-              </div>
-
-              <div class="text-[11px] text-slate-400 font-mono" id="wordCountDisplay">
-                Words: 110 • Characters: 742
-              </div>
-            </div>
-
-            <!-- 1. Subjective -->
-            <div class="space-y-2">
-              <div class="flex items-center justify-between">
-                <label class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-teal-700"></span>
-                  <span>1. Subjective (HPI, ROS, Interval History)</span>
-                </label>
-                <span id="subjectiveStatusBadge" class="text-[10px] font-bold badge-teal px-2 py-0.5 rounded">HPI Recorded</span>
-              </div>
-              <textarea 
-                id="subjectiveTextarea" 
-                oninput="handleDoctorInput('Subjective')" 
-                class="w-full p-3.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-teal-700 focus:ring-2 focus:ring-teal-100 focus:outline-none leading-relaxed transition-all resize-y" 
-                rows="3"
-              >71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.</textarea>
-              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono px-1">
-                <span id="subjCounter">Character count: 215 | Matched CAP Elements: 8/11</span>
-                <span class="text-teal-700 font-semibold" id="subjAlertNote">Interval History Documented</span>
-              </div>
-            </div>
-
-            <!-- 2. Objective -->
-            <div class="space-y-2">
-              <div class="flex items-center justify-between">
-                <label class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-teal-700"></span>
-                  <span>2. Objective (Vitals, Physical Exam & Lab Findings)</span>
-                </label>
-                <span id="objectiveStatusBadge" class="text-[10px] font-bold badge-amber px-2 py-0.5 rounded">LIS Biomarkers Pending</span>
-              </div>
-
-              <div id="objDiffContainer" class="space-y-2 text-xs">
-                <div id="objBeforeBadge" class="p-3 rounded-xl border border-amber-300 bg-amber-50/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-all">
-                  <div class="flex items-start gap-2">
-                    <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-extrabold text-[9px] uppercase shrink-0">Missing In Note</span>
-                    <span class="text-amber-900 text-[11px] font-medium leading-relaxed">Cerner LIS Batch: WBC 8.2 x10^9/L, CRP 6.5 mg/L, Procalcitonin 0.11 ng/mL</span>
-                  </div>
-                  <button 
-                    id="btnAcceptLabs"
-                    onclick="acceptLabIngestion()" 
-                    class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-soft shrink-0 transition-all cursor-pointer hover:scale-105"
-                  >
-                    <span>[+ Insert Cerner LIS Biomarkers]</span>
-                  </button>
-                </div>
-
-                <div id="objAfterBadge" class="p-2.5 rounded-lg border border-emerald-300 bg-emerald-50/90 items-start gap-2 hidden">
-                  <span class="px-1.5 py-0.5 rounded bg-emerald-600 text-white font-extrabold text-[9px] uppercase shrink-0">Ingested ✓</span>
-                  <span class="text-emerald-900 text-[11px] font-medium leading-relaxed">LOINC Biomarkers: WBC 8.2 x 10^9/L, CRP 6.5 mg/L, Procalcitonin 0.11 ng/mL (Resolved)</span>
-                </div>
-              </div>
-
-              <textarea 
-                id="objectiveTextarea" 
-                oninput="handleDoctorInput('Objective')" 
-                class="w-full p-3.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-teal-700 focus:ring-2 focus:ring-teal-100 focus:outline-none leading-relaxed transition-all font-medium resize-y" 
-                rows="5"
-              >Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.
-Physical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.</textarea>
-              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono px-1">
-                <span id="objCounter">Character count: 218 | Matched CAP Elements: 8/11</span>
-                <span class="text-amber-700 font-semibold" id="objKineticsText">Click [+ Insert] to raise score to 78%</span>
-              </div>
-            </div>
-
-            <!-- 3. Assessment -->
-            <div class="space-y-2">
-              <div class="flex items-center justify-between">
-                <label class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-teal-700"></span>
-                  <span>3. Assessment & Clinical Problem List</span>
-                </label>
-                <span id="assessmentStatusBadge" class="text-[10px] font-bold badge-amber px-2 py-0.5 rounded">ACO Specificity Needed</span>
-              </div>
-
-              <div id="assessDiffContainer" class="space-y-2 text-xs">
-                <div id="assessBeforeBadge" class="p-3 rounded-xl border border-amber-300 bg-amber-50/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-all">
-                  <div class="flex items-start gap-2">
-                    <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-extrabold text-[9px] uppercase shrink-0">Coding Gap</span>
-                    <span class="text-amber-900 text-[11px] font-medium">Mild Asthma (Unspecified chronic airway disease)</span>
-                  </div>
-                  <button 
-                    id="btnAcceptAco"
-                    onclick="acceptAcoSpecificity()" 
-                    class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-soft shrink-0 transition-all cursor-pointer hover:scale-105"
-                  >
-                    <span>[+ Clarify Comorbidity Specificity]</span>
-                  </button>
-                </div>
-
-                <div id="assessAfterBadge" class="p-2.5 rounded-lg border border-emerald-300 bg-emerald-50/90 items-start gap-2 hidden">
-                  <span class="px-1.5 py-0.5 rounded bg-emerald-600 text-white font-extrabold text-[9px] uppercase shrink-0">Optimized ✓</span>
-                  <span class="text-emerald-900 text-[11px] font-medium">Asthma-COPD Overlap (ACO) - ICD-10 J44.9 / J45.30 Specified</span>
-                </div>
-              </div>
-
-              <textarea 
-                id="assessmentTextarea" 
-                oninput="handleDoctorInput('Assessment')" 
-                class="w-full p-3.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-teal-700 focus:ring-2 focus:ring-teal-100 focus:outline-none leading-relaxed transition-all resize-y" 
-                rows="3"
-              >1. Community-Acquired Pneumonia (CAP) - Improving.
-2. Mild Asthma - Stable.
-3. Hypertension - Controlled.</textarea>
-              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono px-1">
-                <span id="assessCounter">Character count: 104 | Matched CAP Elements: 8/11</span>
-                <span class="text-teal-700 font-semibold" id="assessIcdText">Click [+ Clarify] to raise score to 86%</span>
-              </div>
-            </div>
-
-            <!-- 4. Plan -->
-            <div class="space-y-2">
-              <div class="flex items-center justify-between">
-                <label class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-teal-700"></span>
-                  <span>4. Plan (Antimicrobial Stewardship & Step-Down)</span>
-                </label>
-                <span id="planStatusBadge" class="text-[10px] font-bold badge-amber px-2 py-0.5 rounded">Duration Vague</span>
-              </div>
-
-              <div id="planDiffContainer" class="space-y-2 text-xs">
-                <div id="planBeforeBadge" class="p-3 rounded-xl border border-amber-300 bg-amber-50/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-all">
-                  <div class="flex items-start gap-2">
-                    <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-extrabold text-[9px] uppercase shrink-0">Stewardship Gap</span>
-                    <span class="text-amber-900 text-[11px] font-medium">Continue antibiotic therapy (duration unquantified)</span>
-                  </div>
-                  <button 
-                    id="btnAcceptPlan"
-                    onclick="acceptStewardshipPlan()" 
-                    class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-soft shrink-0 transition-all cursor-pointer hover:scale-105"
-                  >
-                    <span>[+ Apply ATS/IDSA 7-Day Plan]</span>
-                  </button>
-                </div>
-
-                <div id="planAfterBadge" class="p-2.5 rounded-lg border border-emerald-300 bg-emerald-50/90 items-start gap-2 hidden">
-                  <span class="px-1.5 py-0.5 rounded bg-emerald-600 text-white font-extrabold text-[9px] uppercase shrink-0">Compliant ✓</span>
-                  <span class="text-emerald-900 text-[11px] font-medium">ATS/IDSA Step-down: Oral Amoxicillin/Clavulanate 875/125mg PO BID (7-day course target)</span>
-                </div>
-              </div>
-
-              <textarea 
-                id="planTextarea" 
-                oninput="handleDoctorInput('Plan')" 
-                class="w-full p-3.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-teal-700 focus:ring-2 focus:ring-teal-100 focus:outline-none leading-relaxed transition-all resize-y" 
-                rows="3"
-              >- Continue IV antibiotics and supportive respiratory care.
-- Monitor vitals.
-- Plan discharge when clinically ready.</textarea>
-              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono px-1">
-                <span id="planCounter">Character count: 128 | Matched CAP Elements: 8/11</span>
-                <span class="text-amber-700 font-semibold" id="planDurationText">Click [+ Apply] to reach 92% (Compliant)</span>
-              </div>
-            </div>
-
-          </div>
-
-          <!-- RIGHT: LIVE DYNAMIC DOCIQ INTELLIGENCE GAUGES -->
-          <div class="lg:col-span-5 flex flex-col gap-6">
-            <div class="card-hospital p-6 space-y-4">
-              <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div class="flex items-center gap-2">
-                  <svg class="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                  <span class="font-bold text-sm text-slate-900">DocIQ Intelligence Gauge</span>
-                </div>
-                <span id="aiScoreBadge" class="px-2 py-0.5 rounded text-xs font-bold badge-amber transition-all">68% (Needs Attention)</span>
-              </div>
-
-              <div class="flex items-center gap-5 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                <div class="w-20 h-20 rounded-full bg-amber-50 border-8 border-amber-500 flex flex-col items-center justify-center shrink-0 shadow-soft transition-all duration-500" id="gaugeCircleBorder">
-                  <span id="aiGaugeNumber" class="text-2xl font-extrabold text-amber-800 transition-all">68%</span>
-                  <span class="text-[9px] font-bold text-amber-700" id="gaugeSubLabel">DEFICIENT</span>
-                </div>
-                <div class="space-y-1 text-xs">
-                  <div class="font-bold text-slate-900">Live PRD Evaluation Engine</div>
-                  <p id="aiGaugeDesc" class="text-slate-500 leading-relaxed text-[11px]">
-                    Accept the 3 AI suggestions on the left to elevate documentation to <strong>92% (Excellent)</strong>.
-                  </p>
-                </div>
-              </div>
-
-              <div class="space-y-2 text-xs">
-                <div class="flex justify-between py-1 border-b border-slate-100">
-                  <span class="text-slate-500">1. Completeness Weight (40%)</span>
-                  <strong class="text-slate-800" id="weightCompleteness">29.09 pts (8/11 items)</strong>
-                </div>
-                <div class="flex justify-between py-1 border-b border-slate-100">
-                  <span class="text-slate-500">2. Diagnostic Precision (20%)</span>
-                  <strong class="text-slate-800" id="weightClarity">13.00 pts</strong>
-                </div>
-                <div class="flex justify-between py-1 border-b border-slate-100">
-                  <span class="text-slate-500">3. Consistency & Logic (20%)</span>
-                  <strong class="text-slate-800" id="weightConsistency">12.00 pts</strong>
-                </div>
-                <div class="flex justify-between py-1">
-                  <span class="text-slate-500">4. SOAP Structure (20%)</span>
-                  <strong class="text-slate-800" id="weightOrg">20.00 pts</strong>
-                </div>
-              </div>
-            </div>
-
-            <div id="alertsContainer" class="card-hospital p-5 space-y-3 bg-amber-50/60 border-amber-300 transition-all">
-              <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-amber-900">Documentation Gaps & Action Items</span>
-                <span id="gapsCountBadge" class="text-[10px] font-bold badge-amber px-2 py-0.5 rounded">3 Actions Pending</span>
-              </div>
-              <div id="alertsMessage" class="text-xs text-amber-900 font-medium leading-relaxed space-y-1.5">
-                <p>• <strong>Objective:</strong> Inflammatory kinetics (WBC & CRP) missing from progress note.</p>
-                <p>• <strong>Assessment:</strong> Asthma-COPD Overlap specificity unstated (needed for RWE registry).</p>
-                <p>• <strong>Plan:</strong> Oral step-down dosing target (7 days) unquantified.</p>
-              </div>
-            </div>
-
-            <div class="card-hospital p-5 space-y-2.5 bg-teal-50/30 border-teal-200">
-              <div class="text-[11px] font-bold uppercase tracking-wider text-teal-800 flex items-center gap-1.5">
-                <span>🛡️ Official ATS/IDSA CAP Criteria</span>
-              </div>
-              <div class="space-y-1.5 text-xs text-slate-700">
-                <p>• <strong>Biomarkers:</strong> CRP 6.5 mg/L (85% reduction) clears patient for step-down.</p>
-                <p>• <strong>Stewardship:</strong> 7-day target (Amox/Clav 875/125mg PO BID).</p>
-                <p>• <strong>Severity:</strong> CURB-65 = 1 safely managed in ward.</p>
-              </div>
-            </div>
-          </div>
+        <div class="flex items-center gap-2">
+          <button onclick="resetToRawDraft()" class="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold rounded-xl transition-all shadow-soft cursor-pointer flex items-center gap-1.5">
+            <span>↺ Reset to Draft (68%)</span>
+          </button>
+          <button onclick="quickFillOptimalNote()" class="px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold rounded-xl transition-all shadow-soft cursor-pointer flex items-center gap-1.5">
+            <span>⚡ Quick-Fill (92%)</span>
+          </button>
+          <button onclick="navigateTo(4)" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-xl transition-all shadow-soft flex items-center gap-1.5 cursor-pointer">
+            <span>Clinical Review →</span>
+          </button>
         </div>
       </div>
 
-      <!-- STEP 4: CLINICAL REVIEW (CAP CHECKLIST) -->
-      <div id="screen-4" class="space-y-6 max-w-6xl mx-auto fade-in hidden">
+      <!-- 2-Column Workstation Layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- LEFT 7 COLS: Interactive SOAP Note Editor & Inline AI Patches -->
+        <div class="lg:col-span-7 space-y-4">
+          
+          <!-- SOAP Textarea Box -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <span class="text-xs font-bold tracking-wider text-slate-400 uppercase">PHYSICIAN SOAP DOCUMENT</span>
+              <span class="text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">Cerner Millennium Integrated</span>
+            </div>
+            
+            <textarea 
+              id="soapNoteTextarea" 
+              rows="12" 
+              class="w-full font-mono text-xs text-slate-800 bg-slate-50/70 border border-slate-200 rounded-xl p-3.5 focus:bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none transition-all leading-relaxed"
+              spellcheck="false"
+            >SUBJECTIVE:
+71yo female admitted with fever, productive cough with rust-colored sputum, and worsening shortness of breath for 4 days. Known history of Asthma/COPD overlap (ACO).
+
+OBJECTIVE:
+Vitals: BP 138/84, HR 102, RR 24, Temp 38.8C, SpO2 89% on RA.
+Lungs: Crackles in right middle and lower lobes, bilateral expiratory wheezes.
+
+ASSESSMENT & PLAN:
+Assessment: Community-Acquired Pneumonia.
+Plan: IV Ceftriaxone + Azithromycin, supplemental O2, monitoring.</textarea>
+          </div>
+
+          <!-- Inline CDS Action Patches (Real-Time Recalculation) -->
+          <div class="space-y-3">
+            <div class="text-xs font-bold text-slate-700 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
+              <span>Intelligent Inline Clinical Patches (Click to Apply & Recalculate)</span>
+            </div>
+
+            <!-- Patch 1: Cerner LIS Labs -->
+            <div id="bannerLabs" class="p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-200 text-amber-900 rounded">LOINC Biomarkers</span>
+                  <span class="text-xs font-bold text-slate-800">Cerner LIS Laboratory Telemetry Available</span>
+                </div>
+                <span class="text-xs font-bold text-amber-700">+10% Quality</span>
+              </div>
+              <p class="text-[11px] text-slate-600">
+                Automated LIS stream detected WBC 14.8k, CRP 84 mg/L, Lactate 1.8 mmol/L, S. pneumoniae (Urine Ag +).
+              </p>
+              <div class="pt-1 flex justify-end">
+                <button 
+                  id="btnInsertLabs"
+                  onclick="insertCernerLabs()" 
+                  class="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>+ Insert Cerner LIS Biomarkers</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Patch 2: Diagnostic Specificity (ACO / ICD-10) -->
+            <div id="bannerAco" class="p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-200 text-amber-900 rounded">ICD-10 J44.9 / J45.30</span>
+                  <span class="text-xs font-bold text-slate-800">Comorbidity Specificity Refinement</span>
+                </div>
+                <span class="text-xs font-bold text-amber-700">+8% Quality</span>
+              </div>
+              <p class="text-[11px] text-slate-600">
+                Documented baseline includes Asthma/COPD overlap. Specify exact ACO classification to prevent DRG under-coding.
+              </p>
+              <div class="pt-1 flex justify-end">
+                <button 
+                  id="btnClarifyAco"
+                  onclick="clarifyAcoSpecificity()" 
+                  class="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>+ Clarify Comorbidity Specificity</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Patch 3: ATS/IDSA Stewardship Plan -->
+            <div id="bannerPlan" class="p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-200 text-amber-900 rounded">ATS / IDSA Guidelines</span>
+                  <span class="text-xs font-bold text-slate-800">Antimicrobial Stewardship 7-Day Target</span>
+                </div>
+                <span class="text-xs font-bold text-amber-700">+6% Quality</span>
+              </div>
+              <p class="text-[11px] text-slate-600">
+                Define duration target: IV Ceftriaxone 1g Q24H x 3d, step down to Oral Cefpodoxime 200mg BID (7-Day Total).
+              </p>
+              <div class="pt-1 flex justify-end">
+                <button 
+                  id="btnApplyPlan"
+                  onclick="applyStewardshipPlan()" 
+                  class="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>+ Apply ATS/IDSA Plan Target</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- RIGHT 5 COLS: Dynamic Gauge & Points Breakdown Widget -->
+        <div class="lg:col-span-5 space-y-4">
+          
+          <!-- Real-Time CDS Scoring Gauge Card -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-5">
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold text-slate-900 text-sm">Documentation Quality</h3>
+              <span id="qualityStatusBadge" class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 transition-all">
+                68% (Needs Attention)
+              </span>
+            </div>
+
+            <!-- Radial Gauge Canvas/SVG -->
+            <div class="flex flex-col items-center justify-center py-2">
+              <div class="relative w-44 h-44 flex items-center justify-center">
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" stroke="#F1F5F9" stroke-width="8" fill="transparent"/>
+                  <circle 
+                    id="qualityGaugeArc" 
+                    cx="50" 
+                    cy="50" 
+                    r="40" 
+                    stroke="#D97706" 
+                    stroke-width="8" 
+                    stroke-linecap="round" 
+                    stroke-dasharray="251.32" 
+                    stroke-dashoffset="80.42" 
+                    fill="transparent" 
+                    class="transition-all duration-700 ease-out"
+                  />
+                </svg>
+                <div class="absolute flex flex-col items-center justify-center text-center select-none">
+                  <span id="qualityScoreDisplay" class="text-3xl font-black text-slate-900 font-mono tracking-tight transition-all">68%</span>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">COMPOSITE SCORE</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Points Breakdown Table -->
+            <div class="space-y-2.5 pt-2 border-t border-slate-100">
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-600 font-medium">Completeness Weight</span>
+                <span id="ptsCompleteness" class="font-bold text-slate-900 font-mono">29.09 pts (8/11)</span>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-600 font-medium">Diagnostic Precision</span>
+                <span id="ptsPrecision" class="font-bold text-slate-900 font-mono">13.00 pts</span>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-600 font-medium">Consistency & Clarity</span>
+                <span id="ptsConsistency" class="font-bold text-slate-900 font-mono">12.00 pts</span>
+              </div>
+              <div class="flex justify-between items-center text-xs pt-1 border-t border-slate-100">
+                <span class="text-slate-700 font-bold">Total Quality Score</span>
+                <span id="ptsTotal" class="font-black text-teal-800 font-mono">68.00 / 100</span>
+              </div>
+            </div>
+
+            <!-- Audit Trail Snippet -->
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+              <div class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">LATEST AUDIT LOG</div>
+              <div id="latestAuditLogText" class="text-[11px] text-slate-700 font-mono leading-tight">
+                [08:42:15] Initial physician note drafted (68% Quality).
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div id="screen-4" class="space-y-6 max-w-6xl mx-auto fade-in hidden">
         <div class="card-hospital p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div class="flex items-center gap-2">
@@ -1533,6 +1693,242 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
+
+    // ==============================================================
+    // STEP 3 INTERACTIVE KINETICS & STATE ENGINE
+    // ==============================================================
+    window.docPatchState = {
+      appliedLabs: false,
+      appliedAco: false,
+      appliedPlan: false
+    };
+
+    window.updateQualityGauge = function(score) {
+      const targetScore = Math.min(Math.max(Number(score) || 68, 0), 100);
+      
+      // Update Number
+      const numEl = document.getElementById('qualityScoreDisplay');
+      if (numEl) numEl.innerText = targetScore + '%';
+
+      // Animate SVG Arc (Circumference: 2 * PI * 40 ≈ 251.32)
+      const arcEl = document.getElementById('qualityGaugeArc');
+      if (arcEl) {
+        const circumference = 251.32;
+        const offset = circumference * (1 - targetScore / 100);
+        arcEl.style.strokeDashoffset = offset;
+
+        if (targetScore < 75) {
+          arcEl.setAttribute('stroke', '#D97706'); // Amber
+        } else if (targetScore >= 75 && targetScore < 90) {
+          arcEl.setAttribute('stroke', '#0D9488'); // Teal
+        } else {
+          arcEl.setAttribute('stroke', '#059669'); // Emerald
+        }
+      }
+
+      // Update Status Badge
+      const badgeEl = document.getElementById('qualityStatusBadge');
+      if (badgeEl) {
+        if (targetScore < 75) {
+          badgeEl.innerText = `${targetScore}% (Needs Attention)`;
+          badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 transition-all';
+        } else if (targetScore >= 75 && targetScore < 90) {
+          badgeEl.innerText = `${targetScore}% (In Review / Partial)`;
+          badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200 transition-all';
+        } else {
+          badgeEl.innerText = `${targetScore}% (Excellent / Compliant)`;
+          badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all';
+        }
+      }
+
+      // Update Points Table
+      const ptsComp = document.getElementById('ptsCompleteness');
+      const ptsPrec = document.getElementById('ptsPrecision');
+      const ptsCons = document.getElementById('ptsConsistency');
+      const ptsTot = document.getElementById('ptsTotal');
+
+      if (ptsComp && ptsPrec && ptsCons && ptsTot) {
+        if (targetScore <= 68) {
+          ptsComp.innerText = '29.09 pts (8/11)';
+          ptsPrec.innerText = '13.00 pts';
+          ptsCons.innerText = '12.00 pts';
+          ptsTot.innerText = '68.00 / 100';
+        } else if (targetScore <= 78) {
+          ptsComp.innerText = '36.36 pts (10/11)';
+          ptsPrec.innerText = '18.00 pts';
+          ptsCons.innerText = '14.00 pts';
+          ptsTot.innerText = '78.00 / 100';
+        } else if (targetScore <= 86) {
+          ptsComp.innerText = '36.36 pts (10/11)';
+          ptsPrec.innerText = '22.00 pts';
+          ptsCons.innerText = '16.00 pts';
+          ptsTot.innerText = '86.00 / 100';
+        } else {
+          ptsComp.innerText = '40.00 pts (11/11)';
+          ptsPrec.innerText = '25.00 pts';
+          ptsCons.innerText = '20.00 pts';
+          ptsTot.innerText = '92.00 / 100';
+        }
+      }
+    };
+
+    window.insertCernerLabs = function() {
+      const textarea = document.getElementById('soapNoteTextarea');
+      const labSnippet = "\n[Cerner LIS Biomarkers Aug 18: WBC 8.2 x10^9/L (from 14.1), CRP 6.5 mg/L (from 45.0), Procalcitonin 0.11 ng/mL]";
+      
+      if (textarea && !textarea.value.includes('Cerner LIS Biomarkers')) {
+        const objIdx = textarea.value.indexOf('ASSESSMENT & PLAN');
+        if (objIdx !== -1) {
+          textarea.value = textarea.value.slice(0, objIdx) + labSnippet + "\n\n" + textarea.value.slice(objIdx);
+        } else {
+          textarea.value += "\n" + labSnippet;
+        }
+      }
+
+      window.docPatchState.appliedLabs = true;
+      window.appScoreState.labAccepted = true;
+      window.updateGlobalScores();
+
+      // Transform Banner
+      const banner = document.getElementById('bannerLabs');
+      if (banner) {
+        banner.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      }
+      const btn = document.getElementById('btnInsertLabs');
+      if (btn) {
+        btn.innerHTML = '<span>INGESTED ✓ LOINC Biomarkers Linked</span>';
+        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btn.onclick = null;
+      }
+
+      logAuditMessage('Biomarker telemetry ingested from Cerner LIS (+10% Quality)');
+      showToast('Cerner LIS Biomarkers Ingested (+10% Quality)', 'success');
+    };
+
+    window.clarifyAcoSpecificity = function() {
+      const textarea = document.getElementById('soapNoteTextarea');
+      const acoSnippet = "Asthma-COPD Overlap (ACO) - ICD-10 J44.9 / J45.30";
+      
+      if (textarea) {
+        textarea.value = textarea.value.replace("Community-Acquired Pneumonia.", "Severe CAP in patient with " + acoSnippet + ".");
+      }
+
+      window.docPatchState.appliedAco = true;
+      window.appScoreState.acoAccepted = true;
+      window.updateGlobalScores();
+
+      // Transform Banner
+      const banner = document.getElementById('bannerAco');
+      if (banner) {
+        banner.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      }
+      const btn = document.getElementById('btnClarifyAco');
+      if (btn) {
+        btn.innerHTML = '<span>OPTIMIZED ✓ ICD-10 J44.9/J45.30 Specified</span>';
+        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btn.onclick = null;
+      }
+
+      logAuditMessage('Diagnosis specificity refined to Asthma-COPD Overlap (+8% Quality)');
+      showToast('Diagnosis Specificity Applied (+8% Quality)', 'success');
+    };
+
+    window.applyStewardshipPlan = function() {
+      const textarea = document.getElementById('soapNoteTextarea');
+      const planSnippet = "\n[ATS/IDSA Plan: Amox/Clav 875/125mg PO BID - 7-day target course]";
+      
+      if (textarea && !textarea.value.includes('ATS/IDSA Plan')) {
+        textarea.value += "\n" + planSnippet;
+      }
+
+      window.docPatchState.appliedPlan = true;
+      window.appScoreState.stewardshipAccepted = true;
+      window.updateGlobalScores();
+
+      // Transform Banner
+      const banner = document.getElementById('bannerPlan');
+      if (banner) {
+        banner.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      }
+      const btn = document.getElementById('btnApplyPlan');
+      if (btn) {
+        btn.innerHTML = '<span>VERIFIED ✓ ATS/IDSA Stewardship Target Set</span>';
+        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btn.onclick = null;
+      }
+
+      logAuditMessage('Antimicrobial stewardship plan validated (+6% Quality)');
+      showToast('ATS/IDSA Stewardship Plan Applied (+6% Quality)', 'success');
+    };
+
+    window.resetToRawDraft = function() {
+      window.docPatchState = {
+        appliedLabs: false,
+        appliedAco: false,
+        appliedPlan: false
+      };
+      window.appScoreState.labAccepted = false;
+      window.appScoreState.acoAccepted = false;
+      window.appScoreState.stewardshipAccepted = false;
+
+      const textarea = document.getElementById('soapNoteTextarea');
+      if (textarea) {
+        textarea.value = `SUBJECTIVE:\n71yo female admitted with fever, productive cough with rust-colored sputum, and worsening shortness of breath for 4 days. Known history of Asthma/COPD overlap (ACO).\n\nOBJECTIVE:\nVitals: BP 138/84, HR 102, RR 24, Temp 38.8C, SpO2 89% on RA.\nLungs: Crackles in right middle and lower lobes, bilateral expiratory wheezes.\n\nASSESSMENT & PLAN:\nAssessment: Community-Acquired Pneumonia.\nPlan: IV Ceftriaxone + Azithromycin, supplemental O2, monitoring.`;
+      }
+
+      // Reset Banners
+      const bLabs = document.getElementById('bannerLabs');
+      if (bLabs) bLabs.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2';
+      const btnL = document.getElementById('btnInsertLabs');
+      if (btnL) {
+        btnL.innerHTML = '<span>+ Insert Cerner LIS Biomarkers</span>';
+        btnL.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5';
+        btnL.onclick = window.insertCernerLabs;
+      }
+
+      const bAco = document.getElementById('bannerAco');
+      if (bAco) bAco.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2';
+      const btnA = document.getElementById('btnClarifyAco');
+      if (btnA) {
+        btnA.innerHTML = '<span>+ Clarify Comorbidity Specificity</span>';
+        btnA.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5';
+        btnA.onclick = window.clarifyAcoSpecificity;
+      }
+
+      const bPlan = document.getElementById('bannerPlan');
+      if (bPlan) bPlan.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2';
+      const btnP = document.getElementById('btnApplyPlan');
+      if (btnP) {
+        btnP.innerHTML = '<span>+ Apply ATS/IDSA Plan Target</span>';
+        btnP.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5';
+        btnP.onclick = window.applyStewardshipPlan;
+      }
+
+      window.updateGlobalScores();
+      logAuditMessage('Reset document to raw baseline physician draft (68% Quality)');
+      showToast('Reset to Raw Physician Draft (68% Quality)', 'info');
+    };
+
+    window.quickFillOptimalNote = function() {
+      window.insertCernerLabs();
+      window.clarifyAcoSpecificity();
+      window.applyStewardshipPlan();
+      logAuditMessage('Applied optimal clinical documentation bundle (92% Quality / 89% Research Readiness)');
+      showToast('Optimal Clinical Protocol Applied (92% Quality / 89% Research)', 'success');
+    };
+
+    function logAuditMessage(msg) {
+      const auditEl = document.getElementById('latestAuditLogText');
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+      if (auditEl) {
+        auditEl.innerText = `[${timeStr}] ${msg}`;
+      }
+      if (typeof appendClinicalAuditLog === 'function') {
+        appendClinicalAuditLog('CLINICAL_CDS_PATCH', msg, 'Dr. Mohammed (Attending)');
+      }
+    }
+
 
     // ==============================================================
     // GLOBAL APP STATE & DYNAMIC BADGE SYNCHRONIZATION ENGINE
