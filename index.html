@@ -1399,24 +1399,21 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     // ==============================================================
     // 1. GLOBAL STATE & BULLETPROOF ROUTER
     // ==============================================================
-    window.currentStep = 1;
-    window.appScoreState = {
-      quality: 68,
-      research: 72,
-      labAccepted: false,
-      acoAccepted: false,
-      stewardshipAccepted: false
-    };
-
-    window.docPatchState = {
+    window.clinicalState = {
       appliedLabs: false,
       appliedAco: false,
-      appliedPlan: false
+      appliedPlan: false,
+      score: 68,
+      researchScore: 72,
+      activeStep: 1
     };
+
+    window.docPatchState = window.clinicalState;
+    window.appScoreState = window.clinicalState;
 
     window.navigateTo = function(step) {
       const target = Math.min(Math.max(Number(step) || 1, 1), 7);
-      window.currentStep = target;
+      window.clinicalState.activeStep = target;
 
       for (let s = 1; s <= 7; s++) {
         const screenEl = document.getElementById('screen-' + s);
@@ -1442,11 +1439,11 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       if (target === 4 && typeof window.renderStep4Checklist === 'function') {
         window.renderStep4Checklist();
       }
-      if (target === 6 && typeof window.updateGlobalScores === 'function') {
-        window.updateGlobalScores();
+      if (target === 6 && typeof window.updateStep6UI === 'function') {
+        window.updateStep6UI();
       }
-      if (target === 7 && typeof window.updateFinalRecordDisplay === 'function') {
-        window.updateFinalRecordDisplay();
+      if (target === 7 && typeof window.updateStep7UI === 'function') {
+        window.updateStep7UI();
       }
 
       const mainEl = document.querySelector('main');
@@ -1461,97 +1458,83 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     function setActiveTab(step) { window.navigateTo(step); }
 
     // ==============================================================
-    // 2. REAL-TIME SCORE & TWO-WAY SYNCHRONIZATION ENGINE
+    // 2. RECALCULATE CLINICAL STATE & TWO-WAY UI SYNC
     // ==============================================================
-    window.updateGlobalScores = function() {
-      let q = 68;
-      let r = 72;
+    window.recalculateClinicalState = function() {
+      let score = 68;
+      let research = 72;
 
-      if (window.docPatchState.appliedLabs) { q += 10; r += 8; }
-      if (window.docPatchState.appliedAco) { q += 8; r += 5; }
-      if (window.docPatchState.appliedPlan) { q += 6; r += 4; }
+      if (window.clinicalState.appliedLabs) { score += 10; research += 8; }
+      if (window.clinicalState.appliedAco) { score += 8; research += 5; }
+      if (window.clinicalState.appliedPlan) { score += 6; research += 4; }
 
-      q = Math.min(Math.max(q, 0), 100);
-      r = Math.min(Math.max(r, 0), 100);
+      window.clinicalState.score = Math.min(score, 92);
+      window.clinicalState.researchScore = Math.min(research, 89);
 
-      window.appScoreState.quality = q;
-      window.appScoreState.research = r;
+      // Trigger UI updates
+      window.updateStep1UI();
+      window.updateStep3UI();
+      window.updateStep4UI();
+      window.updateStep6UI();
+      window.updateStep7UI();
+    };
 
-      // Update Step 1 Sarah Card
+    window.updateGlobalScores = window.recalculateClinicalState;
+
+    // Step 1 UI Update
+    window.updateStep1UI = function() {
+      const q = window.clinicalState.score;
+      const r = window.clinicalState.researchScore;
+
       const sCardQ = document.getElementById('sarahCardQualityScore');
       if (sCardQ) sCardQ.innerText = Math.round(q) + '%';
       const sCardR = document.getElementById('sarahCardResearchScore');
       if (sCardR) sCardR.innerText = Math.round(r) + '%';
 
-      // Update Step 3 Radial Gauge
-      window.updateQualityGauge(q);
-
-      // Update Step 6 Documentation Quality Header Badge
-      const qBadge = document.getElementById('step6QualityBadge');
-      if (qBadge) {
-        if (q < 75) {
-          qBadge.innerText = `${Math.round(q)}% - Action Required`;
-          qBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full transition-all';
-        } else if (q >= 75 && q < 90) {
-          qBadge.innerText = `${Math.round(q)}% - In Review`;
-          qBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-full transition-all';
-        } else {
-          qBadge.innerText = `${Math.round(q)}% - Excellent`;
-          qBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full transition-all';
-        }
-      }
-
-      // Update Step 6 Research Readiness Header Badge
-      const rBadge = document.getElementById('step6ResearchBadge');
-      if (rBadge) {
-        if (r < 80) {
-          rBadge.innerText = `${Math.round(r)}% - Moderate`;
-          rBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full transition-all';
-        } else {
-          rBadge.innerText = `${Math.round(r)}% - Very Good`;
-          rBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 rounded-full transition-all';
-        }
-      }
-
-      // Synchronize Step 7 Preview
-      window.updateFinalRecordDisplay();
+      const asideQ = document.getElementById('asideQualityDisplay');
+      if (asideQ) asideQ.innerText = Math.round(q) + '%';
     };
 
-    window.updateQualityGauge = function(score) {
-      const targetScore = Math.min(Math.max(Number(score) || 68, 0), 100);
+    // Step 3 UI Update
+    window.updateStep3UI = function() {
+      const score = window.clinicalState.score;
       
+      // Update Gauge Number
       const numEl = document.getElementById('qualityScoreDisplay');
-      if (numEl) numEl.innerText = targetScore + '%';
+      if (numEl) numEl.innerText = score + '%';
 
+      // Update Gauge SVG Arc
       const arcEl = document.getElementById('qualityGaugeArc');
       if (arcEl) {
         const circumference = 251.32;
-        const offset = circumference * (1 - targetScore / 100);
+        const offset = circumference * (1 - score / 100);
         arcEl.style.strokeDashoffset = offset;
 
-        if (targetScore < 75) {
+        if (score < 75) {
           arcEl.setAttribute('stroke', '#D97706');
-        } else if (targetScore >= 75 && targetScore < 90) {
+        } else if (score >= 75 && score < 90) {
           arcEl.setAttribute('stroke', '#0D9488');
         } else {
           arcEl.setAttribute('stroke', '#059669');
         }
       }
 
+      // Update Status Badge
       const badgeEl = document.getElementById('qualityStatusBadge');
       if (badgeEl) {
-        if (targetScore < 75) {
-          badgeEl.innerText = `${targetScore}% (Needs Attention)`;
+        if (score < 75) {
+          badgeEl.innerText = `${score}% (Needs Attention)`;
           badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 transition-all';
-        } else if (targetScore >= 75 && targetScore < 90) {
-          badgeEl.innerText = `${targetScore}% (In Review / Partial)`;
+        } else if (score >= 75 && score < 90) {
+          badgeEl.innerText = `${score}% (In Review / Partial)`;
           badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200 transition-all';
         } else {
-          badgeEl.innerText = `${targetScore}% (Excellent / Compliant)`;
+          badgeEl.innerText = `${score}% (Excellent / Compliant)`;
           badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all';
         }
       }
 
+      // Update Points Breakdown
       const ptsComp = document.getElementById('ptsCompleteness');
       const ptsPrec = document.getElementById('ptsPrecision');
       const ptsCons = document.getElementById('ptsConsistency');
@@ -1559,19 +1542,19 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       const ptsTot = document.getElementById('ptsTotal');
 
       if (ptsComp && ptsPrec && ptsCons && ptsStruc && ptsTot) {
-        if (targetScore <= 68) {
+        if (score <= 68) {
           ptsComp.innerText = '29.09 pts (8/11)';
           ptsPrec.innerText = '13.00 pts';
           ptsCons.innerText = '12.00 pts';
           ptsStruc.innerText = '14.00 pts';
           ptsTot.innerText = '68.00 / 100';
-        } else if (targetScore <= 78) {
+        } else if (score <= 78) {
           ptsComp.innerText = '36.36 pts (10/11)';
           ptsPrec.innerText = '18.00 pts';
           ptsCons.innerText = '14.00 pts';
           ptsStruc.innerText = '18.00 pts';
           ptsTot.innerText = '78.00 / 100';
-        } else if (targetScore <= 86) {
+        } else if (score <= 86) {
           ptsComp.innerText = '36.36 pts (10/11)';
           ptsPrec.innerText = '22.00 pts';
           ptsCons.innerText = '18.00 pts';
@@ -1586,9 +1569,10 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         }
       }
 
-      const pendingCount = (window.docPatchState.appliedLabs ? 0 : 1) + 
-                           (window.docPatchState.appliedAco ? 0 : 1) + 
-                           (window.docPatchState.appliedPlan ? 0 : 1);
+      // Update Gaps Checklist
+      const pendingCount = (window.clinicalState.appliedLabs ? 0 : 1) + 
+                           (window.clinicalState.appliedAco ? 0 : 1) + 
+                           (window.clinicalState.appliedPlan ? 0 : 1);
       
       const gapsBadge = document.getElementById('gapsStatusBadge');
       if (gapsBadge) {
@@ -1600,84 +1584,145 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
       const gLabs = document.getElementById('gapItemLabs');
       if (gLabs) {
-        gLabs.className = window.docPatchState.appliedLabs
+        gLabs.className = window.clinicalState.appliedLabs
           ? 'p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/50 flex items-center justify-between text-xs'
           : 'p-2.5 rounded-lg border border-amber-200 bg-amber-50/50 flex items-center justify-between text-xs';
-        gLabs.innerHTML = window.docPatchState.appliedLabs
+        gLabs.innerHTML = window.clinicalState.appliedLabs
           ? '<span class="font-medium text-emerald-900">LOINC Biomarkers Ingestion</span><span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Verified ✓</span>'
           : '<span class="font-medium text-amber-900">LOINC Biomarkers Ingestion</span><span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Action Pending</span>';
       }
 
       const gAco = document.getElementById('gapItemAco');
       if (gAco) {
-        gAco.className = window.docPatchState.appliedAco
+        gAco.className = window.clinicalState.appliedAco
           ? 'p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/50 flex items-center justify-between text-xs'
           : 'p-2.5 rounded-lg border border-amber-200 bg-amber-50/50 flex items-center justify-between text-xs';
-        gAco.innerHTML = window.docPatchState.appliedAco
+        gAco.innerHTML = window.clinicalState.appliedAco
           ? '<span class="font-medium text-emerald-900">ACO Comorbidity Specificity</span><span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Specified ✓</span>'
           : '<span class="font-medium text-amber-900">ACO Comorbidity Specificity</span><span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Action Pending</span>';
       }
 
       const gPlan = document.getElementById('gapItemPlan');
       if (gPlan) {
-        gPlan.className = window.docPatchState.appliedPlan
+        gPlan.className = window.clinicalState.appliedPlan
           ? 'p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/50 flex items-center justify-between text-xs'
           : 'p-2.5 rounded-lg border border-amber-200 bg-amber-50/50 flex items-center justify-between text-xs';
-        gPlan.innerHTML = window.docPatchState.appliedPlan
+        gPlan.innerHTML = window.clinicalState.appliedPlan
           ? '<span class="font-medium text-emerald-900">7-Day Stewardship Target</span><span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Validated ✓</span>'
           : '<span class="font-medium text-amber-900">7-Day Stewardship Target</span><span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Action Pending</span>';
       }
     };
 
-    // ==============================================================
-    // 3. STEP 3 ACTIONS & MACROS
-    // ==============================================================
-    window.insertMacro = function(macro) {
-      if (macro === '.vitals') {
-        const objText = document.getElementById('soapObjectiveText');
-        if (objText && !objText.value.includes('BP 118/74')) {
-          objText.value = '• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% room air.\n' + objText.value;
-        }
-      } else if (macro === '.labs') {
-        window.insertCernerLabs();
-      } else if (macro === '.curb65') {
-        const subj = document.getElementById('soapSubjectiveText');
-        if (subj && !subj.value.includes('CURB-65')) {
-          subj.value += '\n• Severity Score: CURB-65 = 1 (Age 71, low risk, eligible for step-down).';
-        }
-      } else if (macro === '.stewardship') {
-        window.applyStewardshipPlan();
+    // Step 4 UI Update
+    window.updateStep4UI = function() {
+      if (typeof window.renderStep4Checklist === 'function') {
+        window.renderStep4Checklist();
       }
-      window.handleLiveSoapInput();
     };
 
-    window.handleLiveSoapInput = function() {
+    // Step 6 UI Update
+    window.updateStep6UI = function() {
+      const q = window.clinicalState.score;
+      const r = window.clinicalState.researchScore;
+
+      const qBadge = document.getElementById('step6QualityBadge');
+      if (qBadge) {
+        if (q < 75) {
+          qBadge.innerText = `${Math.round(q)}% - Action Required`;
+          qBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full transition-all';
+        } else if (q >= 75 && q < 90) {
+          qBadge.innerText = `${Math.round(q)}% - In Review`;
+          qBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-full transition-all';
+        } else {
+          qBadge.innerText = `${Math.round(q)}% - Excellent`;
+          qBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full transition-all';
+        }
+      }
+
+      const rBadge = document.getElementById('step6ResearchBadge');
+      if (rBadge) {
+        if (r < 80) {
+          rBadge.innerText = `${Math.round(r)}% - Moderate`;
+          rBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full transition-all';
+        } else {
+          rBadge.innerText = `${Math.round(r)}% - Very Good`;
+          rBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 rounded-full transition-all';
+        }
+      }
+    };
+
+    // Step 7 UI Update (Live Synchronized Display)
+    window.updateStep7UI = function() {
       const sSubj = document.getElementById('soapSubjectiveText')?.value || '';
       const sObj = document.getElementById('soapObjectiveText')?.value || '';
       const sAssess = document.getElementById('soapAssessmentText')?.value || '';
       const sPlan = document.getElementById('soapPlanText')?.value || '';
 
-      const s = sSubj + ' ' + sObj + ' ' + sAssess + ' ' + sPlan;
-      const words = s.trim() ? s.trim().split(/\s+/).length : 0;
-      const chars = s.length;
-      const counterEl = document.getElementById('soapStatsCounter');
-      if (counterEl) {
-        counterEl.innerText = `${words} words • ${chars} chars`;
+      const dSubj = document.getElementById('step7SubjectiveDisplay');
+      if (dSubj) dSubj.innerText = sSubj;
+      const dObj = document.getElementById('step7ObjectiveDisplay');
+      if (dObj) dObj.innerText = sObj;
+      const dAssess = document.getElementById('step7AssessmentDisplay');
+      if (dAssess) dAssess.innerText = sAssess;
+      const dPlan = document.getElementById('step7PlanDisplay');
+      if (dPlan) dPlan.innerText = sPlan;
+
+      // Badges
+      const bObj = document.getElementById('step7ObjectiveBadge');
+      if (bObj) {
+        bObj.innerText = window.clinicalState.appliedLabs ? 'LOINC Labs Linked ✓' : 'Pending LOINC Labs';
+        bObj.className = window.clinicalState.appliedLabs 
+          ? 'text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded' 
+          : 'text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded';
       }
 
-      // Two-Way Sync to Step 7
-      window.updateFinalRecordDisplay();
+      const bAssess = document.getElementById('step7AssessmentBadge');
+      if (bAssess) {
+        bAssess.innerText = window.clinicalState.appliedAco ? 'ACO Specified ✓' : 'Needs Specificity';
+        bAssess.className = window.clinicalState.appliedAco 
+          ? 'text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded' 
+          : 'text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded';
+      }
+
+      const bPlan = document.getElementById('step7PlanBadge');
+      if (bPlan) {
+        bPlan.innerText = window.clinicalState.appliedPlan ? '7-Day Target Validated ✓' : 'Unspecified Duration';
+        bPlan.className = window.clinicalState.appliedPlan 
+          ? 'text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded' 
+          : 'text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded';
+      }
+
+      const q = window.clinicalState.score;
+      const qEl = document.getElementById('finalAttestQuality');
+      if (qEl) qEl.innerText = `${Math.round(q)}% Documentation Quality`;
+
+      const headerBadge = document.getElementById('finalHeaderBadge');
+      if (headerBadge) {
+        headerBadge.innerText = q >= 90 ? 'Ready for Signature • 92%' : `Draft Status • ${Math.round(q)}%`;
+        headerBadge.className = q >= 90 
+          ? 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200'
+          : 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200';
+      }
+
+      const metCount = 8 + (window.clinicalState.appliedLabs ? 1 : 0) + (window.clinicalState.appliedAco ? 1 : 0) + (window.clinicalState.appliedPlan ? 1 : 0);
+      const gapCount = 11 - metCount;
+      const critEl = document.getElementById('finalAttestCriteriaMet');
+      if (critEl) critEl.innerText = `${metCount}/11 Criteria Met • ${gapCount} Gaps`;
     };
 
-    window.insertCernerLabs = function() {
+    window.updateFinalRecordDisplay = window.updateStep7UI;
+
+    // ==============================================================
+    // 3. ACTIVE CLICK HANDLERS (STEP 3 INLINE ACTIONS)
+    // ==============================================================
+    window.handleInsertLabs = function() {
       const objText = document.getElementById('soapObjectiveText');
       if (objText) {
-        objText.value = `• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 breaths/min | Temp 37.1°C (afebrile) | SpO2 98% on room air.\n• Physical Examination: Alert, oriented x3, in no acute respiratory distress. Light end-inspiratory crackles right lower lobe improving. No wheezing.\n• Ingested Cerner LIS LOINC Biomarkers (Aug 18):\n  - WBC Count: 8.2 x10^9/L (down from 14.1 x10^9/L on admission)\n  - Quantitative CRP: 6.5 mg/L (down from 45.0 mg/L, >85% reduction)\n  - Procalcitonin: 0.11 ng/mL (Normal baseline < 0.25 ng/mL, sepsis excluded)\n  - Urine Antigen: S. pneumoniae positive (confirmatory etiology)`;
+        objText.value = `• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% room air.\n• Physical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.\n• Ingested Cerner LIS LOINC Biomarkers (Aug 18):\n  - WBC Count: 8.2 x10^9/L (down from 14.1 x10^9/L on admission)\n  - Quantitative CRP: 6.5 mg/L (down from 45.0 mg/L, >85% reduction)\n  - Procalcitonin: 0.11 ng/mL (Normal baseline < 0.25 ng/mL, sepsis excluded)\n  - Urine Antigen: S. pneumoniae positive (confirmatory etiology)`;
       }
 
-      window.docPatchState.appliedLabs = true;
-      window.appScoreState.labAccepted = true;
-      window.updateGlobalScores();
+      window.clinicalState.appliedLabs = true;
+      window.recalculateClinicalState();
 
       const badge = document.getElementById('badgeObjectiveStatus');
       if (badge) {
@@ -1698,15 +1743,16 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       window.handleLiveSoapInput();
     };
 
-    window.clarifyAcoSpecificity = function() {
+    window.insertCernerLabs = window.handleInsertLabs;
+
+    window.handleClarifyAco = function() {
       const assessText = document.getElementById('soapAssessmentText');
       if (assessText) {
-        assessText.value = `1. Severe Community-Acquired Pneumonia (CAP) due to Streptococcus pneumoniae - Resolving (ICD-10 J13 / J18.9).\n2. Asthma-COPD Overlap (ACO) - Explicit Diagnostic Specification (ICD-10 J44.9 / J45.30).\n3. Essential Hypertension - Clinically stable.`;
+        assessText.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO) - ICD-10 J44.9 / J45.30 Specified.\n3. Essential Hypertension - Blood pressure controlled.`;
       }
 
-      window.docPatchState.appliedAco = true;
-      window.appScoreState.acoAccepted = true;
-      window.updateGlobalScores();
+      window.clinicalState.appliedAco = true;
+      window.recalculateClinicalState();
 
       const badge = document.getElementById('badgeAssessmentStatus');
       if (badge) {
@@ -1727,15 +1773,16 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       window.handleLiveSoapInput();
     };
 
-    window.applyStewardshipPlan = function() {
+    window.clarifyAcoSpecificity = window.handleClarifyAco;
+
+    window.handleApplyPlan = function() {
       const planText = document.getElementById('soapPlanText');
       if (planText) {
-        planText.value = `• Step-down from IV Ceftriaxone to Oral Antimicrobial Therapy: Amoxicillin-Clavulanate (Augmentin) 875/125 mg PO BID.\n• Total Duration of Therapy: Strict 7-day stewardship target course (3 days IV completed + 4 days oral step-down).\n• ATS/IDSA Criteria Met: Afebrile >24h, stable telemetry, normal mentation, and resolving inflammatory biomarkers.\n• Discharge planning initiated with outpatient pulmonary clinic follow-up in 2 weeks.`;
+        planText.value = `• Step-down to oral antibiotics: Amoxicillin-Clavulanate 875/125mg PO BID.\n• Target total duration: 7-day stewardship target per ATS/IDSA guidelines.\n• Discharge planning initiated; continue room air monitoring.`;
       }
 
-      window.docPatchState.appliedPlan = true;
-      window.appScoreState.stewardshipAccepted = true;
-      window.updateGlobalScores();
+      window.clinicalState.appliedPlan = true;
+      window.recalculateClinicalState();
 
       const badge = document.getElementById('badgePlanStatus');
       if (badge) {
@@ -1756,24 +1803,21 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       window.handleLiveSoapInput();
     };
 
+    window.applyStewardshipPlan = window.handleApplyPlan;
+
     window.resetToRawDraft = function() {
-      window.docPatchState = {
-        appliedLabs: false,
-        appliedAco: false,
-        appliedPlan: false
-      };
-      window.appScoreState.labAccepted = false;
-      window.appScoreState.acoAccepted = false;
-      window.appScoreState.stewardshipAccepted = false;
+      window.clinicalState.appliedLabs = false;
+      window.clinicalState.appliedAco = false;
+      window.clinicalState.appliedPlan = false;
 
       const sSubj = document.getElementById('soapSubjectiveText');
-      if (sSubj) sSubj.value = `71-year-old female admitted with fever, productive cough, and pleuritic chest pain. Worsening shortness of breath for 4 days. Known history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.`;
+      if (sSubj) sSubj.value = `71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.`;
       
       const sObj = document.getElementById('soapObjectiveText');
-      if (sObj) sObj.value = `• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% room air.\n• Physical Exam: Light end-inspiratory crackles right lower lobe. Improving compared to Day 1. No wheezing.`;
+      if (sObj) sObj.value = `• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% room air.\n• Physical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.`;
       
       const sAssess = document.getElementById('soapAssessmentText');
-      if (sAssess) sAssess.value = `1. Community-Acquired Pneumonia (CAP) - Clinical Resolution Trajectory (ICD-10 J18.9).\n2. Essential Hypertension - Stable on home regimen.`;
+      if (sAssess) sAssess.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO) - Needs Diagnostic Refinement.\n3. Essential Hypertension - Blood pressure controlled.`;
       
       const sPlan = document.getElementById('soapPlanText');
       if (sPlan) sPlan.value = `• Continue supportive inpatient care and serial vital signs monitoring.\n• Maintain supplemental oxygen PRN to keep SpO2 >= 94%.`;
@@ -1791,7 +1835,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       if (btnL) {
         btnL.innerHTML = '+ Insert Cerner LIS Biomarkers';
         btnL.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer shrink-0';
-        btnL.onclick = window.insertCernerLabs;
+        btnL.onclick = window.handleInsertLabs;
       }
 
       const bannerA = document.getElementById('bannerAco');
@@ -1800,7 +1844,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       if (btnA) {
         btnA.innerHTML = '+ Clarify Comorbidity Specificity';
         btnA.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer shrink-0';
-        btnA.onclick = window.clarifyAcoSpecificity;
+        btnA.onclick = window.handleClarifyAco;
       }
 
       const bannerP = document.getElementById('bannerPlan');
@@ -1809,32 +1853,68 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       if (btnP) {
         btnP.innerHTML = '+ Apply ATS/IDSA Plan Target';
         btnP.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer shrink-0';
-        btnP.onclick = window.applyStewardshipPlan;
+        btnP.onclick = window.handleApplyPlan;
       }
 
-      window.updateGlobalScores();
+      window.recalculateClinicalState();
       window.handleLiveSoapInput();
       showToast('Reset to Raw Physician Draft (68% Quality)', 'info');
     };
 
     window.quickFillOptimalNote = function() {
-      window.insertCernerLabs();
-      window.clarifyAcoSpecificity();
-      window.applyStewardshipPlan();
+      window.handleInsertLabs();
+      window.handleClarifyAco();
+      window.handleApplyPlan();
       window.handleLiveSoapInput();
       showToast('Optimal Clinical Protocol Applied (92% Quality / 89% Research)', 'success');
     };
 
-    // ==============================================================
-    // 4. STEP 4 CHECKLIST ENGINE
-    // ==============================================================
+    // Macros
+    window.insertMacro = function(macro) {
+      if (macro === '.vitals') {
+        const objText = document.getElementById('soapObjectiveText');
+        if (objText && !objText.value.includes('BP 118/74')) {
+          objText.value = '• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% room air.\n' + objText.value;
+        }
+      } else if (macro === '.labs') {
+        window.handleInsertLabs();
+      } else if (macro === '.curb65') {
+        const subj = document.getElementById('soapSubjectiveText');
+        if (subj && !subj.value.includes('CURB-65')) {
+          subj.value += '\n• Severity Score: CURB-65 = 1 (Age 71, low risk, eligible for step-down).';
+        }
+      } else if (macro === '.stewardship') {
+        window.handleApplyPlan();
+      }
+      window.handleLiveSoapInput();
+    };
+
+    window.handleLiveSoapInput = function() {
+      const sSubj = document.getElementById('soapSubjectiveText')?.value || '';
+      const sObj = document.getElementById('soapObjectiveText')?.value || '';
+      const sAssess = document.getElementById('soapAssessmentText')?.value || '';
+      const sPlan = document.getElementById('soapPlanText')?.value || '';
+
+      const s = sSubj + ' ' + sObj + ' ' + sAssess + ' ' + sPlan;
+      const words = s.trim() ? s.trim().split(/\s+/).length : 0;
+      const chars = s.length;
+      const counterEl = document.getElementById('soapStatsCounter');
+      if (counterEl) {
+        counterEl.innerText = `${words} words • ${chars} chars`;
+      }
+
+      // Two-Way Sync to Step 7
+      window.updateStep7UI();
+    };
+
+    // Step 4 CAP Checklist Renderer
     window.renderStep4Checklist = function() {
       const grid = document.getElementById('checklistDetailedList');
       if (!grid) return;
 
-      const labsOk = !!window.docPatchState.appliedLabs;
-      const acoOk = !!window.docPatchState.appliedAco;
-      const planOk = !!window.docPatchState.appliedPlan;
+      const labsOk = !!window.clinicalState.appliedLabs;
+      const acoOk = !!window.clinicalState.appliedAco;
+      const planOk = !!window.clinicalState.appliedPlan;
 
       const items = [
         { label: '1. Patient Demographics & Age', ok: true, desc: 'Validated with EHR Registry (Sarah Al-Otaibi, 71y, MRN 882934).' },
@@ -1876,67 +1956,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       `).join('');
     };
 
-    // ==============================================================
-    // 5. STEP 7 TWO-WAY DYNAMIC PREVIEW & ATTESTATION ENGINE
-    // ==============================================================
-    window.updateFinalRecordDisplay = function() {
-      const sSubj = document.getElementById('soapSubjectiveText')?.value || '';
-      const sObj = document.getElementById('soapObjectiveText')?.value || '';
-      const sAssess = document.getElementById('soapAssessmentText')?.value || '';
-      const sPlan = document.getElementById('soapPlanText')?.value || '';
-
-      const dSubj = document.getElementById('step7SubjectiveDisplay');
-      if (dSubj) dSubj.innerText = sSubj;
-      const dObj = document.getElementById('step7ObjectiveDisplay');
-      if (dObj) dObj.innerText = sObj;
-      const dAssess = document.getElementById('step7AssessmentDisplay');
-      if (dAssess) dAssess.innerText = sAssess;
-      const dPlan = document.getElementById('step7PlanDisplay');
-      if (dPlan) dPlan.innerText = sPlan;
-
-      // Update Step 7 Badges
-      const bObj = document.getElementById('step7ObjectiveBadge');
-      if (bObj) {
-        bObj.innerText = window.docPatchState.appliedLabs ? 'LOINC Labs Linked ✓' : 'Pending LOINC Labs';
-        bObj.className = window.docPatchState.appliedLabs 
-          ? 'text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded' 
-          : 'text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded';
-      }
-
-      const bAssess = document.getElementById('step7AssessmentBadge');
-      if (bAssess) {
-        bAssess.innerText = window.docPatchState.appliedAco ? 'ACO Specified ✓' : 'Needs Specificity';
-        bAssess.className = window.docPatchState.appliedAco 
-          ? 'text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded' 
-          : 'text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded';
-      }
-
-      const bPlan = document.getElementById('step7PlanBadge');
-      if (bPlan) {
-        bPlan.innerText = window.docPatchState.appliedPlan ? '7-Day Target Validated ✓' : 'Unspecified Duration';
-        bPlan.className = window.docPatchState.appliedPlan 
-          ? 'text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded' 
-          : 'text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded';
-      }
-
-      const qVal = window.appScoreState.quality || 68;
-      const qEl = document.getElementById('finalAttestQuality');
-      if (qEl) qEl.innerText = `${Math.round(qVal)}% Documentation Quality`;
-
-      const headerBadge = document.getElementById('finalHeaderBadge');
-      if (headerBadge) {
-        headerBadge.innerText = qVal >= 90 ? 'Ready for Signature • 92%' : `Draft Status • ${Math.round(qVal)}%`;
-        headerBadge.className = qVal >= 90 
-          ? 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200'
-          : 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200';
-      }
-
-      const metCount = 8 + (window.docPatchState.appliedLabs ? 1 : 0) + (window.docPatchState.appliedAco ? 1 : 0) + (window.docPatchState.appliedPlan ? 1 : 0);
-      const gapCount = 11 - metCount;
-      const critEl = document.getElementById('finalAttestCriteriaMet');
-      if (critEl) critEl.innerText = `${metCount}/11 Criteria Met • ${gapCount} Gaps`;
-    };
-
+    // Save Final Record
     window.saveFinalRecord = function() {
       showToast('Document Cryptographically Signed & Saved to EHR ✓', 'success');
       setTimeout(() => {
@@ -2026,7 +2046,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     // Auto-initialize on DOM load
     document.addEventListener('DOMContentLoaded', () => {
       window.navigateTo(1);
-      window.updateGlobalScores();
+      window.recalculateClinicalState();
     });
   </script>
 </body>
