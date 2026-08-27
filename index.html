@@ -8,6 +8,141 @@
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
+
+    // ==============================================================
+    // GLOBAL REACTIVE SCORE SYNCHRONIZATION ENGINE
+    // ==============================================================
+    window.appScoreState = {
+      quality: 68,
+      research: 72,
+      labAccepted: false,
+      acoAccepted: false,
+      stewardshipAccepted: false
+    };
+
+    window.updateGlobalScores = function() {
+      // 1. Calculate Quality Score based on accepted clinical actions
+      let q = 68;
+      let r = 72;
+      
+      let comp = 29;
+      let acc = 13;
+      let clar = 12;
+      let org = 14;
+
+      let dComp = 24;
+      let conf = 22;
+      let plaus = 16;
+      let cons = 10;
+
+      if (window.appScoreState.labAccepted) {
+        q += 10; // 78
+        r += 8;  // 80
+        comp += 3;
+        acc += 5;
+        dComp += 8;
+        conf += 4;
+      }
+      if (window.appScoreState.acoAccepted) {
+        q += 8;  // 86
+        r += 5;  // 85
+        acc += 7;
+        clar += 4;
+        conf += 4;
+        plaus += 2;
+      }
+      if (window.appScoreState.stewardshipAccepted) {
+        q += 6;  // 92
+        r += 4;  // 89
+        comp += 3;
+        clar += 4;
+        org += 6;
+        dComp += 8;
+        plaus += 2;
+      }
+
+      // Clamp max
+      q = Math.min(q, 96);
+      r = Math.min(r, 92);
+      comp = Math.min(comp, 35);
+      acc = Math.min(acc, 25);
+      clar = Math.min(clar, 20);
+      org = Math.min(org, 20);
+
+      dComp = Math.min(dComp, 40);
+      conf = Math.min(conf, 30);
+      plaus = Math.min(plaus, 20);
+
+      window.appScoreState.quality = q;
+      window.appScoreState.research = r;
+
+      // Update Step 1 Sarah Al-Otaibi Card
+      const sCardQ = document.getElementById('sarahCardQualityScore');
+      if (sCardQ) sCardQ.innerText = q + '%';
+      const sCardR = document.getElementById('sarahCardResearchScore');
+      if (sCardR) sCardR.innerText = r + '%';
+
+      // Update Step 3 Gauge
+      if (typeof updateQualityGauge === 'function') {
+        updateQualityGauge(q);
+      }
+
+      // Update Step 6 Documentation Quality Elements
+      const qBadge = document.getElementById('step6QualityBadge');
+      if (qBadge) {
+        qBadge.innerText = q >= 90 ? `${q}% - Excellent` : q >= 75 ? `${q}% - In Review` : `${q}% - Deficient`;
+        qBadge.className = q >= 90 
+          ? 'text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full transition-all'
+          : 'text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full transition-all';
+      }
+
+      const valComp = document.getElementById('step6ValCompleteness');
+      if (valComp) valComp.innerText = comp + '%';
+      const barComp = document.getElementById('step6BarCompleteness');
+      if (barComp) barComp.style.width = comp + '%';
+
+      const valAcc = document.getElementById('step6ValAccuracy');
+      if (valAcc) valAcc.innerText = acc + '%';
+      const barAcc = document.getElementById('step6BarAccuracy');
+      if (barAcc) barAcc.style.width = acc + '%';
+
+      const valClar = document.getElementById('step6ValClarity');
+      if (valClar) valClar.innerText = clar + '%';
+      const barClar = document.getElementById('step6BarClarity');
+      if (barClar) barClar.style.width = clar + '%';
+
+      const valOrg = document.getElementById('step6ValOrg');
+      if (valOrg) valOrg.innerText = org + '%';
+      const barOrg = document.getElementById('step6BarOrg');
+      if (barOrg) barOrg.style.width = org + '%';
+
+      // Update Step 6 Research Readiness Elements
+      const rBadge = document.getElementById('step6ResearchBadge');
+      if (rBadge) {
+        rBadge.innerText = r >= 85 ? `${r}% - Very Good` : `${r}% - Moderate`;
+      }
+
+      const valDComp = document.getElementById('step6ValDataComp');
+      if (valDComp) valDComp.innerText = dComp + '%';
+      const barDComp = document.getElementById('step6BarDataComp');
+      if (barDComp) barDComp.style.width = dComp + '%';
+
+      const valConf = document.getElementById('step6ValConformance');
+      if (valConf) valConf.innerText = conf + '%';
+      const barConf = document.getElementById('step6BarConformance');
+      if (barConf) barConf.style.width = conf + '%';
+
+      const valPlaus = document.getElementById('step6ValPlausibility');
+      if (valPlaus) valPlaus.innerText = plaus + '%';
+      const barPlaus = document.getElementById('step6BarPlausibility');
+      if (barPlaus) barPlaus.style.width = plaus + '%';
+
+      const valCons = document.getElementById('step6ValConsistency');
+      if (valCons) valCons.innerText = cons + '%';
+      const barCons = document.getElementById('step6BarConsistency');
+      if (barCons) barCons.style.width = cons + '%';
+    };
+
     tailwind.config = {
       theme: {
         extend: {
@@ -1068,6 +1203,9 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     <!-- ============================================================== -->
     <!-- STEP 6: DUAL SCORING ENGINE (CRASH-PROOF DIRECT HTML RENDER)   -->
     <!-- ============================================================== -->
+    <!-- ============================================================== -->
+    <!-- STEP 6: DUAL SCORING ENGINE (FULLY REACTIVE & SYNCHRONIZED)    -->
+    <!-- ============================================================== -->
     <div id="screen-6" class="w-full max-w-6xl mx-auto space-y-6 fade-in pb-12" style="display: none;">
       
       <!-- Header -->
@@ -1092,7 +1230,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         <div class="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm flex flex-col">
           <div class="bg-[#0B1528] px-6 py-4 flex items-center justify-between">
             <h3 class="font-bold text-white text-base tracking-wide">Documentation Quality Score</h3>
-            <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full">92% - Excellent</span>
+            <span id="step6QualityBadge" class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full transition-all">92% - Excellent</span>
           </div>
           
           <div class="p-6 space-y-5 flex-1">
@@ -1100,10 +1238,10 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             <div class="space-y-1.5">
               <div class="flex justify-between text-xs font-semibold text-slate-700">
                 <span>Completeness</span>
-                <span class="text-slate-900 font-bold">35%</span>
+                <span id="step6ValCompleteness" class="text-slate-900 font-bold font-mono">35%</span>
               </div>
               <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div class="bg-[#0B1528] h-full rounded-full transition-all duration-500" style="width: 35%;"></div>
+                <div id="step6BarCompleteness" class="bg-[#0B1528] h-full rounded-full transition-all duration-500" style="width: 35%;"></div>
               </div>
             </div>
 
@@ -1111,10 +1249,10 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             <div class="space-y-1.5">
               <div class="flex justify-between text-xs font-semibold text-slate-700">
                 <span>Accuracy/Correctness</span>
-                <span class="text-slate-900 font-bold">25%</span>
+                <span id="step6ValAccuracy" class="text-slate-900 font-bold font-mono">25%</span>
               </div>
               <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div class="bg-[#0B1528] h-full rounded-full transition-all duration-500" style="width: 25%;"></div>
+                <div id="step6BarAccuracy" class="bg-[#0B1528] h-full rounded-full transition-all duration-500" style="width: 25%;"></div>
               </div>
             </div>
 
@@ -1122,10 +1260,10 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             <div class="space-y-1.5">
               <div class="flex justify-between text-xs font-semibold text-slate-700">
                 <span>Clarity</span>
-                <span class="text-slate-900 font-bold">20%</span>
+                <span id="step6ValClarity" class="text-slate-900 font-bold font-mono">20%</span>
               </div>
               <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div class="bg-[#0B1528] h-full rounded-full transition-all duration-500" style="width: 20%;"></div>
+                <div id="step6BarClarity" class="bg-[#0B1528] h-full rounded-full transition-all duration-500" style="width: 20%;"></div>
               </div>
             </div>
 
@@ -1133,15 +1271,11 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             <div class="space-y-1.5">
               <div class="flex justify-between text-xs font-semibold text-slate-700">
                 <span>Organization</span>
-                <span class="text-slate-900 font-bold">20%</span>
+                <span id="step6ValOrg" class="text-slate-900 font-bold font-mono">20%</span>
               </div>
               <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div class="bg-[#0B1528] h-full rounded-full transition-all duration-500" style="width: 20%;"></div>
+                <div id="step6BarOrg" class="bg-[#0B1528] h-full rounded-full transition-all duration-500" style="width: 20%;"></div>
               </div>
-            </div>
-
-            <div class="pt-4 mt-2 border-t border-slate-100">
-              <p class="text-[11px] text-slate-400 italic">Source: Framework informed by PDQI-9 documentation quality dimensions</p>
             </div>
           </div>
         </div>
@@ -1150,7 +1284,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         <div class="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm flex flex-col">
           <div class="bg-[#0E6245] px-6 py-4 flex items-center justify-between">
             <h3 class="font-bold text-white text-base tracking-wide">Research Readiness Score</h3>
-            <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 rounded-full">89% - Very Good</span>
+            <span id="step6ResearchBadge" class="text-xs font-semibold px-2.5 py-1 bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 rounded-full transition-all">89% - Very Good</span>
           </div>
           
           <div class="p-6 space-y-5 flex-1">
@@ -1158,10 +1292,10 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             <div class="space-y-1.5">
               <div class="flex justify-between text-xs font-semibold text-slate-700">
                 <span>Data completeness</span>
-                <span class="text-slate-900 font-bold">40%</span>
+                <span id="step6ValDataComp" class="text-slate-900 font-bold font-mono">40%</span>
               </div>
               <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div class="bg-[#0E6245] h-full rounded-full transition-all duration-500" style="width: 40%;"></div>
+                <div id="step6BarDataComp" class="bg-[#0E6245] h-full rounded-full transition-all duration-500" style="width: 40%;"></div>
               </div>
             </div>
 
@@ -1169,10 +1303,10 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             <div class="space-y-1.5">
               <div class="flex justify-between text-xs font-semibold text-slate-700">
                 <span>Conformance</span>
-                <span class="text-slate-900 font-bold">30%</span>
+                <span id="step6ValConformance" class="text-slate-900 font-bold font-mono">30%</span>
               </div>
               <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div class="bg-[#0E6245] h-full rounded-full transition-all duration-500" style="width: 30%;"></div>
+                <div id="step6BarConformance" class="bg-[#0E6245] h-full rounded-full transition-all duration-500" style="width: 30%;"></div>
               </div>
             </div>
 
@@ -1180,10 +1314,10 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             <div class="space-y-1.5">
               <div class="flex justify-between text-xs font-semibold text-slate-700">
                 <span>Plausibility</span>
-                <span class="text-slate-900 font-bold">20%</span>
+                <span id="step6ValPlausibility" class="text-slate-900 font-bold font-mono">20%</span>
               </div>
               <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div class="bg-[#0E6245] h-full rounded-full transition-all duration-500" style="width: 20%;"></div>
+                <div id="step6BarPlausibility" class="bg-[#0E6245] h-full rounded-full transition-all duration-500" style="width: 20%;"></div>
               </div>
             </div>
 
@@ -1191,15 +1325,11 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             <div class="space-y-1.5">
               <div class="flex justify-between text-xs font-semibold text-slate-700">
                 <span>Data consistency</span>
-                <span class="text-slate-900 font-bold">10%</span>
+                <span id="step6ValConsistency" class="text-slate-900 font-bold font-mono">10%</span>
               </div>
               <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div class="bg-[#0E6245] h-full rounded-full transition-all duration-500" style="width: 10%;"></div>
+                <div id="step6BarConsistency" class="bg-[#0E6245] h-full rounded-full transition-all duration-500" style="width: 10%;"></div>
               </div>
-            </div>
-
-            <div class="pt-4 mt-2 border-t border-slate-100">
-              <p class="text-[11px] text-slate-400 italic">Source: Weiskopf & Weng data quality framework for EHR research use; Source: Kahn et al. (2016) harmonized data quality framework</p>
             </div>
           </div>
         </div>
@@ -1426,6 +1556,141 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
+
+    // ==============================================================
+    // GLOBAL REACTIVE SCORE SYNCHRONIZATION ENGINE
+    // ==============================================================
+    window.appScoreState = {
+      quality: 68,
+      research: 72,
+      labAccepted: false,
+      acoAccepted: false,
+      stewardshipAccepted: false
+    };
+
+    window.updateGlobalScores = function() {
+      // 1. Calculate Quality Score based on accepted clinical actions
+      let q = 68;
+      let r = 72;
+      
+      let comp = 29;
+      let acc = 13;
+      let clar = 12;
+      let org = 14;
+
+      let dComp = 24;
+      let conf = 22;
+      let plaus = 16;
+      let cons = 10;
+
+      if (window.appScoreState.labAccepted) {
+        q += 10; // 78
+        r += 8;  // 80
+        comp += 3;
+        acc += 5;
+        dComp += 8;
+        conf += 4;
+      }
+      if (window.appScoreState.acoAccepted) {
+        q += 8;  // 86
+        r += 5;  // 85
+        acc += 7;
+        clar += 4;
+        conf += 4;
+        plaus += 2;
+      }
+      if (window.appScoreState.stewardshipAccepted) {
+        q += 6;  // 92
+        r += 4;  // 89
+        comp += 3;
+        clar += 4;
+        org += 6;
+        dComp += 8;
+        plaus += 2;
+      }
+
+      // Clamp max
+      q = Math.min(q, 96);
+      r = Math.min(r, 92);
+      comp = Math.min(comp, 35);
+      acc = Math.min(acc, 25);
+      clar = Math.min(clar, 20);
+      org = Math.min(org, 20);
+
+      dComp = Math.min(dComp, 40);
+      conf = Math.min(conf, 30);
+      plaus = Math.min(plaus, 20);
+
+      window.appScoreState.quality = q;
+      window.appScoreState.research = r;
+
+      // Update Step 1 Sarah Al-Otaibi Card
+      const sCardQ = document.getElementById('sarahCardQualityScore');
+      if (sCardQ) sCardQ.innerText = q + '%';
+      const sCardR = document.getElementById('sarahCardResearchScore');
+      if (sCardR) sCardR.innerText = r + '%';
+
+      // Update Step 3 Gauge
+      if (typeof updateQualityGauge === 'function') {
+        updateQualityGauge(q);
+      }
+
+      // Update Step 6 Documentation Quality Elements
+      const qBadge = document.getElementById('step6QualityBadge');
+      if (qBadge) {
+        qBadge.innerText = q >= 90 ? `${q}% - Excellent` : q >= 75 ? `${q}% - In Review` : `${q}% - Deficient`;
+        qBadge.className = q >= 90 
+          ? 'text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full transition-all'
+          : 'text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full transition-all';
+      }
+
+      const valComp = document.getElementById('step6ValCompleteness');
+      if (valComp) valComp.innerText = comp + '%';
+      const barComp = document.getElementById('step6BarCompleteness');
+      if (barComp) barComp.style.width = comp + '%';
+
+      const valAcc = document.getElementById('step6ValAccuracy');
+      if (valAcc) valAcc.innerText = acc + '%';
+      const barAcc = document.getElementById('step6BarAccuracy');
+      if (barAcc) barAcc.style.width = acc + '%';
+
+      const valClar = document.getElementById('step6ValClarity');
+      if (valClar) valClar.innerText = clar + '%';
+      const barClar = document.getElementById('step6BarClarity');
+      if (barClar) barClar.style.width = clar + '%';
+
+      const valOrg = document.getElementById('step6ValOrg');
+      if (valOrg) valOrg.innerText = org + '%';
+      const barOrg = document.getElementById('step6BarOrg');
+      if (barOrg) barOrg.style.width = org + '%';
+
+      // Update Step 6 Research Readiness Elements
+      const rBadge = document.getElementById('step6ResearchBadge');
+      if (rBadge) {
+        rBadge.innerText = r >= 85 ? `${r}% - Very Good` : `${r}% - Moderate`;
+      }
+
+      const valDComp = document.getElementById('step6ValDataComp');
+      if (valDComp) valDComp.innerText = dComp + '%';
+      const barDComp = document.getElementById('step6BarDataComp');
+      if (barDComp) barDComp.style.width = dComp + '%';
+
+      const valConf = document.getElementById('step6ValConformance');
+      if (valConf) valConf.innerText = conf + '%';
+      const barConf = document.getElementById('step6BarConformance');
+      if (barConf) barConf.style.width = conf + '%';
+
+      const valPlaus = document.getElementById('step6ValPlausibility');
+      if (valPlaus) valPlaus.innerText = plaus + '%';
+      const barPlaus = document.getElementById('step6BarPlausibility');
+      if (barPlaus) barPlaus.style.width = plaus + '%';
+
+      const valCons = document.getElementById('step6ValConsistency');
+      if (valCons) valCons.innerText = cons + '%';
+      const barCons = document.getElementById('step6BarConsistency');
+      if (barCons) barCons.style.width = cons + '%';
+    };
+
     function evaluateClinicalNote(note) {
       const checklist = {
         demographics: Boolean(note.patientId && note.age),
@@ -1897,171 +2162,95 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     }
 
     function acceptLabIngestion() {
-      isLabAccepted = true;
-      const objEl = document.getElementById('objectiveTextarea');
-      const labSnippet = "\\n\\n[Cerner LIS Biomarkers Aug 18]: WBC 8.2 x10^9/L (from 14.1), CRP 6.5 mg/L (from 45.0), Procalcitonin 0.11 ng/mL.";
-      if (!objEl.value.includes('WBC 8.2')) {
-        objEl.value += labSnippet;
+      const assessmentEl = document.getElementById('assessmentPlanInput');
+      if (assessmentEl && !assessmentEl.value.includes('Leukocytosis')) {
+        assessmentEl.value = assessmentEl.value + "
+
+[LIS INGESTED: WBC 14.8k, CRP 84 mg/L, Lactate 1.8 mmol/L, S. pneumoniae (Urine Ag +)]";
       }
-      objEl.classList.add('highlight-insert');
-      setTimeout(() => objEl.classList.remove('highlight-insert'), 1800);
-
-      const beforeBadge = document.getElementById('objBeforeBadge');
-      if (beforeBadge) beforeBadge.classList.add('hidden');
-      const afterBadge = document.getElementById('objAfterBadge');
-      if (afterBadge) {
-        afterBadge.classList.remove('hidden');
-        afterBadge.classList.add('flex');
+      window.appScoreState.labAccepted = true;
+      window.updateGlobalScores();
+      appendClinicalAuditLog('LIS_LAB_INGESTION', 'Automated LOINC Laboratory biomarkers injected into SOAP draft (+10% Quality).', 'Dr. Mohammed (Attending)');
+      showToast('LIS Labs Ingested (+10% Documentation Quality)', 'success');
+      const btn = document.getElementById('labIngestBtn');
+      if (btn) {
+        btn.innerHTML = '✓ Ingested';
+        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
       }
-
-      document.getElementById('objectiveStatusBadge').innerText = 'LOINC MAPPED';
-      document.getElementById('objectiveStatusBadge').className = 'text-[10px] font-bold badge-emerald px-2 py-0.5 rounded';
-      document.getElementById('objKineticsText').innerText = 'Biomarker Kinetics Documented';
-      document.getElementById('objKineticsText').className = 'text-emerald-700 font-semibold';
-
-      appendClinicalAuditLog(
-        'EHR Ingest',
-        'LIS Biomarker Ingestion',
-        'LOINC / Cerner LIS',
-        'Ingested LOINC-mapped labs (WBC 8.2 x10^9/L, CRP 6.5 mg/L, Procalcitonin 0.11 ng/mL).'
-      );
-
-      handleDoctorInput();
-      showToast('Cerner LIS Injected (+10%)', 'WBC 8.2 & CRP 6.5 added to Objective. Score raised to 78%!', 'success');
     }
 
     function acceptAcoSpecificity() {
-      isAcoAccepted = true;
-      const assessEl = document.getElementById('assessmentTextarea');
-      assessEl.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\\n2. Asthma-COPD Overlap (ACO) - ICD-10 J44.9 / J45.30.\\n3. Essential Hypertension - Blood pressure controlled.`;
-      assessEl.classList.add('highlight-insert');
-      setTimeout(() => assessEl.classList.remove('highlight-insert'), 1800);
-
-      const beforeBadge = document.getElementById('assessBeforeBadge');
-      if (beforeBadge) beforeBadge.classList.add('hidden');
-      const afterBadge = document.getElementById('assessAfterBadge');
-      if (afterBadge) {
-        afterBadge.classList.remove('hidden');
-        afterBadge.classList.add('flex');
+      const assessmentEl = document.getElementById('assessmentPlanInput');
+      if (assessmentEl && !assessmentEl.value.includes('J13')) {
+        assessmentEl.value = assessmentEl.value + "
+[ACO SPECIFICITY: J13 - Pneumonia due to Streptococcus pneumoniae]";
       }
-
-      document.getElementById('assessmentStatusBadge').innerText = 'ACO SPECIFIED (J44.9/J45.30)';
-      document.getElementById('assessmentStatusBadge').className = 'text-[10px] font-bold badge-emerald px-2 py-0.5 rounded';
-      document.getElementById('assessIcdText').innerText = 'ICD-10 Specificity Mapped';
-      document.getElementById('assessIcdText').className = 'text-emerald-700 font-semibold';
-
-      appendClinicalAuditLog(
-        'Diagnostic Refinement',
-        'Comorbidity Coding Specificity',
-        'Dr. Mohammed',
-        'Upgraded comorbidity to Asthma-COPD Overlap (ACO) ICD-10 J44.9/J45.30.'
-      );
-
-      handleDoctorInput();
-      showToast('ACO Specificity Added (+8%)', 'Assessment upgraded with J44.9 code. Score raised to 86%!', 'success');
+      window.appScoreState.acoAccepted = true;
+      window.updateGlobalScores();
+      appendClinicalAuditLog('DIAGNOSTIC_REFINEMENT', 'Diagnostic specificity upgraded to ICD-10 J13 (+8% Quality).', 'Dr. Mohammed (Attending)');
+      showToast('Diagnostic Specificity Applied (+8% Quality)', 'success');
+      const btn = document.getElementById('acoBtn');
+      if (btn) {
+        btn.innerHTML = '✓ Refined';
+        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
+      }
     }
 
     function acceptStewardshipPlan() {
-      isPlanAccepted = true;
-      const planEl = document.getElementById('planTextarea');
-      planEl.value = `- Step-down to Oral Amox/Clav 875/125mg PO BID to complete 7-day course.\\n- Discontinue supplemental oxygen; patient stable at 98% room air.\\n- Resume home Losartan 50mg daily and Ipratropium/Albuterol MDI.\\n- Discharge planning for tomorrow with outpatient pulmonary clinic follow-up in 7 days.`;
-      planEl.classList.add('highlight-insert');
-      setTimeout(() => planEl.classList.remove('highlight-insert'), 1800);
-
-      const beforeBadge = document.getElementById('planBeforeBadge');
-      if (beforeBadge) beforeBadge.classList.add('hidden');
-      const afterBadge = document.getElementById('planAfterBadge');
-      if (afterBadge) {
-        afterBadge.classList.remove('hidden');
-        afterBadge.classList.add('flex');
+      const assessmentEl = document.getElementById('assessmentPlanInput');
+      if (assessmentEl && !assessmentEl.value.includes('7-Day Plan')) {
+        assessmentEl.value = assessmentEl.value + "
+[STEWARDSHIP: Ceftriaxone 1g IV Q24H x 3d -> Oral Cefpodoxime 200mg BID (7-Day Total Course)]";
       }
-
-      document.getElementById('planStatusBadge').innerText = 'ATS/IDSA COMPLIANT';
-      document.getElementById('planStatusBadge').className = 'text-[10px] font-bold badge-emerald px-2 py-0.5 rounded';
-      document.getElementById('planDurationText').innerText = '7-Day Target Verified';
-      document.getElementById('planDurationText').className = 'text-emerald-700 font-semibold';
-
-      appendClinicalAuditLog(
-        'Clinical Guideline Action',
-        'Antimicrobial Stewardship Acceptance',
-        'Dr. Mohammed',
-        'Applied ATS/IDSA 7-day oral step-down regimen (Amoxicillin/Clavulanate 875/125mg PO BID).'
-      );
-
-      handleDoctorInput();
-      showToast('7-Day Plan Applied (+6%)', 'Stewardship step-down protocol applied. Score reached 92% (Compliant)!', 'success');
+      window.appScoreState.stewardshipAccepted = true;
+      window.updateGlobalScores();
+      appendClinicalAuditLog('STEWARDSHIP_PLAN', 'Evidence-based 7-day antibiotic stewardship de-escalation protocol accepted (+6% Quality).', 'Dr. Mohammed (Attending)');
+      showToast('7-Day Stewardship Plan Applied (+6% Quality)', 'success');
+      const btn = document.getElementById('stewardshipBtn');
+      if (btn) {
+        btn.innerHTML = '✓ Plan Accepted';
+        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
+      }
     }
 
     function resetToRawDraft() {
-      isLabAccepted = false;
-      isAcoAccepted = false;
-      isPlanAccepted = false;
-      isRecordSigned = false;
-
-      document.getElementById('subjectiveTextarea').value = `71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.`;
-      document.getElementById('objectiveTextarea').value = `Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\\nPhysical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.`;
-      document.getElementById('assessmentTextarea').value = `1. Community-Acquired Pneumonia (CAP) - Improving.\\n2. Mild Asthma - Stable.\\n3. Hypertension - Controlled.`;
-      document.getElementById('planTextarea').value = `- Continue IV antibiotics and supportive respiratory care.\\n- Monitor vitals.\\n- Plan discharge when clinically ready.`;
-
-      const objBefore = document.getElementById('objBeforeBadge');
-      if (objBefore) { objBefore.classList.remove('hidden'); objBefore.classList.add('flex'); }
-      const objAfter = document.getElementById('objAfterBadge');
-      if (objAfter) { objAfter.classList.add('hidden'); objAfter.classList.remove('flex'); }
-
-      const assessBefore = document.getElementById('assessBeforeBadge');
-      if (assessBefore) { assessBefore.classList.remove('hidden'); assessBefore.classList.add('flex'); }
-      const assessAfter = document.getElementById('assessAfterBadge');
-      if (assessAfter) { assessAfter.classList.add('hidden'); assessAfter.classList.remove('flex'); }
-
-      const planBefore = document.getElementById('planBeforeBadge');
-      if (planBefore) { planBefore.classList.remove('hidden'); planBefore.classList.add('flex'); }
-      const planAfter = document.getElementById('planAfterBadge');
-      if (planAfter) { planAfter.classList.add('hidden'); planAfter.classList.remove('flex'); }
-
-      document.getElementById('objectiveStatusBadge').innerText = 'LIS Biomarkers Pending';
-      document.getElementById('objectiveStatusBadge').className = 'text-[10px] font-bold badge-amber px-2 py-0.5 rounded';
-      document.getElementById('objKineticsText').innerText = 'Click [+ Insert] to raise score to 78%';
-      document.getElementById('objKineticsText').className = 'text-amber-700 font-semibold';
-
-      document.getElementById('assessmentStatusBadge').innerText = 'ACO Specificity Needed';
-      document.getElementById('assessmentStatusBadge').className = 'text-[10px] font-bold badge-amber px-2 py-0.5 rounded';
-      document.getElementById('assessIcdText').innerText = 'Click [+ Clarify] to raise score to 86%';
-      document.getElementById('assessIcdText').className = 'text-teal-700 font-semibold';
-
-      document.getElementById('planStatusBadge').innerText = 'Duration Vague';
-      document.getElementById('planStatusBadge').className = 'text-[10px] font-bold badge-amber px-2 py-0.5 rounded';
-      document.getElementById('planDurationText').innerText = 'Click [+ Apply] to reach 92% (Compliant)';
-      document.getElementById('planDurationText').className = 'text-amber-700 font-semibold';
-
-      // Reset Step 7 UI
-      const saveBtn = document.getElementById('saveFinalBtn');
-      if (saveBtn) {
-        saveBtn.innerHTML = '<span>Save Final Record in EHR ✓</span>';
-        saveBtn.className = 'px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-soft flex items-center gap-2 transition-all cursor-pointer hover:scale-105 active:scale-95';
+      window.appScoreState = {
+        quality: 68,
+        research: 72,
+        labAccepted: false,
+        acoAccepted: false,
+        stewardshipAccepted: false
+      };
+      window.updateGlobalScores();
+      const assessmentEl = document.getElementById('assessmentPlanInput');
+      if (assessmentEl) {
+        assessmentEl.value = "Assessment: Community-Acquired Pneumonia.
+Plan: IV Ceftriaxone + Azithromycin, supplemental O2, monitoring.";
       }
-      const badge = document.getElementById('finalRecordStatusBadge');
-      if (badge) {
-        badge.innerText = 'Draft (Unsigned)';
-        badge.className = 'px-2 py-0.5 rounded text-xs font-bold badge-amber';
-      }
-      const provTag = document.getElementById('provenanceVerifiedTag');
-      if (provTag) {
-        provTag.innerText = 'Unsigned Draft';
-        provTag.className = 'px-2 py-0.2 rounded bg-slate-100 text-slate-700 text-[10px] font-bold';
-      }
-
-      handleDoctorInput();
-      showToast('Reset to Raw Draft (68%)', 'Baseline un-optimized draft loaded.', 'info');
+      showToast('Reset to Raw Physician Draft (68% Quality)', 'info');
     }
 
     function quickFillOptimalNote() {
-      acceptLabIngestion();
-      acceptAcoSpecificity();
-      acceptStewardshipPlan();
-      showToast('Quick-Fill Applied', 'All 3 AI optimizations accepted. Score elevated to 92%!', 'success');
-    }
+      window.appScoreState = {
+        quality: 92,
+        research: 89,
+        labAccepted: true,
+        acoAccepted: true,
+        stewardshipAccepted: true
+      };
+      window.updateGlobalScores();
+      const assessmentEl = document.getElementById('assessmentPlanInput');
+      if (assessmentEl) {
+        assessmentEl.value = "Assessment: Severe Community-Acquired Pneumonia due to Streptococcus pneumoniae (ICD-10 J13) in a 71-year-old female with Asthma/COPD overlap (ACO).
 
-    let typingDebounceTimer = null;
+Plan:
+1. Ingested LOINC Labs: WBC 14.8k, CRP 84 mg/L, Lactate 1.8 mmol/L, Urine Ag (+).
+2. Antimicrobial Stewardship: Ceftriaxone 1g IV Q24H x 3d, then switch to Oral Cefpodoxime 200mg BID for 4 days (Total 7-day course).
+3. Respiratory: Maintain SpO2 92-94%, monitor serial vitals.";
+      }
+      appendClinicalAuditLog('OPTIMAL_NOTE_GENERATION', 'Applied hospital optimal documentation protocol (92% Quality / 89% Research Readiness).', 'Dr. Mohammed (Attending)');
+      showToast('Optimal Clinical Protocol Applied (92% Quality / 89% Research Readiness)', 'success');
+    }
 
     function handleDoctorInput(sectionChanged) {
       if (sectionChanged) {
