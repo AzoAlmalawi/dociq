@@ -1194,136 +1194,118 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
     </div>
 
-    <div id="screen-7" class="space-y-6 max-w-5xl mx-auto fade-in hidden">
-        
-        <!-- TOP BREADCRUMB -->
-        <div class="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto pb-1 no-print">
-          <button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
-          <span>›</span>
-          <button onclick="navigateTo(3)" class="hover:text-teal-700">Step 3: Clinical Document</button>
-          <span>›</span>
-          <button onclick="navigateTo(6)" class="hover:text-teal-700">Step 6: Dual Scores</button>
-          <span>›</span>
-          <span class="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-            Step 7: Finalize Clinical Record (Sign & Save)
-          </span>
+    <!-- ============================================================== -->
+    <!-- STEP 7: FINALIZE RECORD (REACTIVE PREVIEW & EHR SIGN-OFF)      -->
+    <!-- ============================================================== -->
+    <div id="screen-7" class="space-y-6 max-w-5xl mx-auto fade-in pb-12" style="display: none;">
+      
+      <!-- Top Header Card -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <h2 class="text-xl font-bold text-slate-900">Final Attestation & EHR Sign-Off</h2>
+            <span id="finalHeaderBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">Draft Status • 68%</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">Real-time synchronized preview from Step 3 editor. Verify attestation certificate and commit HL7 FHIR bundle.</p>
         </div>
 
-        <!-- DYNAMIC CLINICAL OVERRIDE WARNING BANNER (SHOWN WHEN SCORE < 90%) -->
-        <div id="step7OverrideWarningBanner" class="p-4 rounded-xl bg-amber-50 border border-amber-300 flex items-start gap-3 text-xs text-amber-900 fade-in no-print">
-          <div class="text-base shrink-0">⚠️</div>
-          <div class="space-y-0.5">
-            <div class="font-bold text-amber-950">Documentation Completeness Advisory</div>
-            <p class="leading-relaxed">
-              Note: 3 ATS/IDSA recommendations remain unaddressed. Clinician attestation will record override in the audit log.
-            </p>
+        <div class="flex items-center gap-2.5">
+          <button onclick="navigateTo(6)" class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-all cursor-pointer">
+            ← Dual Scores
+          </button>
+          <button onclick="saveFinalRecord()" class="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-soft transition-all flex items-center gap-2 cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <span>Sign & Save to EHR</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 Structured SOAP Preview Cards (Live Reactive) -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
+            <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">LIVE SYNCHRONIZED EHR NOTE PREVIEW</span>
           </div>
+          <span class="text-xs font-mono text-slate-400">Auto-Synced with Step 3</span>
         </div>
 
-        <!-- COMPLIANT VERIFIED BANNER (SHOWN WHEN SCORE >= 90%) -->
-        <div id="step7VerifiedBanner" class="p-4 rounded-xl bg-emerald-50 border border-emerald-300 items-start gap-3 text-xs text-emerald-900 fade-in hidden no-print">
-          <div class="text-base shrink-0">✓</div>
-          <div class="space-y-0.5">
-            <div class="font-bold text-emerald-950">ATS/IDSA Quality Benchmark Satisfied (92%)</div>
-            <p class="leading-relaxed">
-              All 11 CAP checklist items, LIS biomarkers, and 7-day stewardship targets verified. Ready for standard EHR signing.
-            </p>
-          </div>
-        </div>
-
-        <!-- HEADER CONTROLS BAR -->
-        <div class="card-hospital p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
-          <div>
-            <div class="flex items-center gap-2">
-              <h2 class="text-xl font-bold text-slate-900">Step 7: Finalize Clinical Record</h2>
-              <span id="finalRecordStatusBadge" class="px-2 py-0.5 rounded text-xs font-bold badge-amber">Draft (Unsigned)</span>
+        <div class="space-y-4">
+          <!-- 1. SUBJECTIVE -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider">1. SUBJECTIVE</span>
+              <span class="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">HPI Confirmed</span>
             </div>
-            <p class="text-xs text-slate-500 mt-1">
-              Cryptographic SHA-256 provenance stamping and immediate FHIR R4 document bridge synchronization.
-            </p>
+            <div id="step7SubjectiveDisplay" class="font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">71-year-old female admitted with fever, productive cough, and pleuritic chest pain. Worsening shortness of breath for 4 days. Known history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.</div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-2.5">
-            <button onclick="window.print()" class="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl shadow-soft cursor-pointer">
-              Print Document
-            </button>
-            <button 
-              onclick="saveFinalRecord()" 
-              id="saveFinalBtn" 
-              class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-soft flex items-center gap-2 transition-all cursor-pointer hover:scale-105 active:scale-95"
-            >
-              <span>Save Final Record in EHR ✓</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- PRINTABLE CLINICAL DOCUMENT -->
-        <div class="card-hospital p-8 space-y-6 print-area">
-          <div class="flex items-center justify-between border-b border-slate-200 pb-4">
-            <div>
-              <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">King Fahd University Medical Center • Inpatient Care</div>
-              <h1 class="text-xl font-extrabold text-slate-900 mt-0.5">CLINICAL PROGRESS NOTE & STEP-DOWN</h1>
+          <!-- 2. OBJECTIVE -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider">2. OBJECTIVE</span>
+              <span id="step7ObjectiveBadge" class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Pending LOINC Labs</span>
             </div>
-            <div class="text-right text-xs">
-              <div class="font-bold text-slate-900">Patient: Sarah Al-Otaibi</div>
-              <div class="text-slate-500">MRN: 882934 • Attending: Dr. Mohammed</div>
-            </div>
+            <div id="step7ObjectiveDisplay" class="font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% room air.
+• Physical Exam: Light end-inspiratory crackles right lower lobe. Improving compared to Day 1. No wheezing.</div>
           </div>
 
-          <div class="space-y-4 text-xs">
-            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-              <div class="font-bold text-slate-900 uppercase text-[11px] flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-teal-700"></span>
-                <span>Subjective:</span>
-              </div>
-              <div id="finalSubjective" class="text-slate-700 whitespace-pre-wrap leading-relaxed"></div>
+          <!-- 3. ASSESSMENT -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider">3. ASSESSMENT</span>
+              <span id="step7AssessmentBadge" class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Needs Specificity</span>
             </div>
-
-            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-              <div class="font-bold text-slate-900 uppercase text-[11px] flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-teal-700"></span>
-                <span>Objective:</span>
-              </div>
-              <div id="finalObjective" class="text-slate-700 whitespace-pre-wrap leading-relaxed font-medium"></div>
-            </div>
-
-            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-              <div class="font-bold text-slate-900 uppercase text-[11px] flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-teal-700"></span>
-                <span>Assessment:</span>
-              </div>
-              <div id="finalAssessment" class="text-slate-700 whitespace-pre-wrap leading-relaxed"></div>
-            </div>
-
-            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-              <div class="font-bold text-slate-900 uppercase text-[11px] flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-teal-700"></span>
-                <span>Plan:</span>
-              </div>
-              <div id="finalPlan" class="text-slate-700 whitespace-pre-wrap leading-relaxed"></div>
-            </div>
+            <div id="step7AssessmentDisplay" class="font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">1. Community-Acquired Pneumonia (CAP) - Clinical Resolution Trajectory (ICD-10 J18.9).
+2. Essential Hypertension - Stable on home regimen.</div>
           </div>
 
-          <div class="pt-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg" id="provenanceLockIcon">🔒</div>
-              <div>
-                <div class="font-bold text-slate-900 flex items-center gap-2">
-                  <span>Dr. Mohammed, MD • Attending Physician</span>
-                  <span id="provenanceVerifiedTag" class="px-2 py-0.2 rounded bg-slate-100 text-slate-700 text-[10px] font-bold">Unsigned Draft</span>
-                </div>
-                <div class="text-slate-500 font-mono text-[11px]" id="provenanceHashStamp">
-                  Audit Hash: sha256-8f9b2a7d4fcbda879e61209b44c82e71fa01 • 2026-08-27T18:50:00Z
-                </div>
-              </div>
+          <!-- 4. PLAN -->
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider">4. PLAN & STEWARDSHIP</span>
+              <span id="step7PlanBadge" class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Unspecified Duration</span>
             </div>
-            <button onclick="openFhirModal()" class="px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 rounded-xl font-bold flex items-center gap-2 shadow-soft transition-all cursor-pointer">
-              <svg class="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zm0 5h16"/></svg>
-              <span>View FHIR R4 Bundle</span>
-            </button>
+            <div id="step7PlanDisplay" class="font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">• Continue supportive inpatient care and serial vital signs monitoring.
+• Maintain supplemental oxygen PRN to keep SpO2 >= 94%.</div>
           </div>
         </div>
       </div>
+
+      <!-- Attestation & Signature Certificate Card -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">PHYSICIAN ATTESTATION & DIGITAL SIGNATURE</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+            <span class="text-[10px] font-bold text-slate-400 uppercase">ATTESTING PHYSICIAN</span>
+            <div class="text-xs font-bold text-slate-900">Dr. Mohammed (Attending)</div>
+            <div class="text-[10px] text-slate-500 font-mono">License: SA-MD-99482</div>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+            <span class="text-[10px] font-bold text-slate-400 uppercase">CLINICAL QUALITY ATTESTATION</span>
+            <div class="text-xs font-bold text-emerald-700" id="finalAttestQuality">68% Documentation Quality</div>
+            <div class="text-[10px] text-slate-500 font-mono" id="finalAttestCriteriaMet">8/11 Criteria Met • 3 Gaps</div>
+          </div>
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+            <span class="text-[10px] font-bold text-slate-400 uppercase">FHIR R4 PROTOCOL</span>
+            <div class="text-xs font-bold text-teal-800">HL7 FHIR R4 Validated</div>
+            <div class="text-[10px] text-slate-500 font-mono">USCDI v6 Standard Compliant</div>
+          </div>
+        </div>
+
+        <div class="pt-2 flex items-center justify-between">
+          <button onclick="openFhirModal()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-all cursor-pointer flex items-center gap-1.5">
+            <span>Inspect FHIR R4 Bundle JSON</span>
+          </button>
+          <button onclick="saveFinalRecord()" class="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-soft transition-all flex items-center gap-2 cursor-pointer">
+            <span>Sign & Save to EHR</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
 
     </main>
   </div>
@@ -1477,7 +1459,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     function setActiveTab(step) { window.navigateTo(step); }
 
     // ==============================================================
-    // 2. SCORE & GAUGE SYNCHRONIZATION ENGINE
+    // 2. REAL-TIME SCORE & TWO-WAY SYNCHRONIZATION ENGINE
     // ==============================================================
     window.updateGlobalScores = function() {
       let q = 68;
@@ -1528,6 +1510,9 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
           rBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 rounded-full transition-all';
         }
       }
+
+      // Synchronize Step 7 Preview
+      window.updateFinalRecordDisplay();
     };
 
     window.updateQualityGauge = function(score) {
@@ -1649,7 +1634,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       if (macro === '.vitals') {
         const objText = document.getElementById('soapObjectiveText');
         if (objText && !objText.value.includes('BP 118/74')) {
-          objText.value = '• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% on room air.\n' + objText.value;
+          objText.value = '• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% room air.\n' + objText.value;
         }
       } else if (macro === '.labs') {
         window.insertCernerLabs();
@@ -1665,17 +1650,21 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     };
 
     window.handleLiveSoapInput = function() {
-      const s = (document.getElementById('soapSubjectiveText')?.value || '') + ' ' +
-                (document.getElementById('soapObjectiveText')?.value || '') + ' ' +
-                (document.getElementById('soapAssessmentText')?.value || '') + ' ' +
-                (document.getElementById('soapPlanText')?.value || '');
-      
+      const sSubj = document.getElementById('soapSubjectiveText')?.value || '';
+      const sObj = document.getElementById('soapObjectiveText')?.value || '';
+      const sAssess = document.getElementById('soapAssessmentText')?.value || '';
+      const sPlan = document.getElementById('soapPlanText')?.value || '';
+
+      const s = sSubj + ' ' + sObj + ' ' + sAssess + ' ' + sPlan;
       const words = s.trim() ? s.trim().split(/\s+/).length : 0;
       const chars = s.length;
       const counterEl = document.getElementById('soapStatsCounter');
       if (counterEl) {
         counterEl.innerText = `${words} words • ${chars} chars`;
       }
+
+      // Two-Way Sync to Step 7
+      window.updateFinalRecordDisplay();
     };
 
     window.insertCernerLabs = function() {
@@ -1727,7 +1716,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       if (banner) banner.className = 'p-3.5 rounded-xl border border-emerald-300 bg-emerald-50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
       const btn = document.getElementById('btnClarifyAco');
       if (btn) {
-        btn.innerHTML = '<span>OPTIMIZED ✓ Asthma-COPD Overlap (ACO) Specified</span>';
+        btn.innerHTML = '<span>OPTIMIZED ✓ ICD-10 Specified</span>';
         btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default shrink-0';
         btn.onclick = null;
       }
@@ -1776,16 +1765,16 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       window.appScoreState.stewardshipAccepted = false;
 
       const sSubj = document.getElementById('soapSubjectiveText');
-      if (sSubj) sSubj.value = `• 71-year-old female admitted 3 days ago with high-grade fever, productive cough with rust-colored sputum, worsening dyspnea on exertion, and sharp right-sided pleuritic chest pain.\n• Past Medical History: Known baseline of mild persistent asthma and essential hypertension.\n• Inpatient Interval (Day 3): Patient reports significant clinical improvement; productive cough is resolving, pleuritic chest pain has subsided, and shortness of breath is markedly improved.\n• Afebrile for >24 hours with no nocturnal chills or diaphoresis.`;
+      if (sSubj) sSubj.value = `71-year-old female admitted with fever, productive cough, and pleuritic chest pain. Worsening shortness of breath for 4 days. Known history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.`;
       
       const sObj = document.getElementById('soapObjectiveText');
-      if (sObj) sObj.value = `• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 breaths/min | Temp 37.1°C (afebrile) | SpO2 98% on room air.\n• Physical Examination: Alert, oriented x3, in no acute respiratory distress. Chest auscultation demonstrates light end-inspiratory crackles over right middle and lower lung fields; significantly improved compared to admission baseline. No bilateral expiratory wheezes or stridor.`;
+      if (sObj) sObj.value = `• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% room air.\n• Physical Exam: Light end-inspiratory crackles right lower lobe. Improving compared to Day 1. No wheezing.`;
       
       const sAssess = document.getElementById('soapAssessmentText');
       if (sAssess) sAssess.value = `1. Community-Acquired Pneumonia (CAP) - Clinical Resolution Trajectory (ICD-10 J18.9).\n2. Essential Hypertension - Stable on home regimen.`;
       
       const sPlan = document.getElementById('soapPlanText');
-      if (sPlan) sPlan.value = `• Continue supportive inpatient care and serial vital signs monitoring.\n• Maintain supplemental oxygen PRN to keep SpO2 >= 94%.\n• Awaiting full biomarker telemetry review and antimicrobial stewardship evaluation.`;
+      if (sPlan) sPlan.value = `• Continue supportive inpatient care and serial vital signs monitoring.\n• Maintain supplemental oxygen PRN to keep SpO2 >= 94%.`;
 
       const bObj = document.getElementById('badgeObjectiveStatus');
       if (bObj) { bObj.innerText = 'Pending Labs'; bObj.className = 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200'; }
@@ -1886,22 +1875,64 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     };
 
     // ==============================================================
-    // 5. STEP 7 FINALIZE & ATTESTATION ENGINE
+    // 5. STEP 7 TWO-WAY DYNAMIC PREVIEW & ATTESTATION ENGINE
     // ==============================================================
     window.updateFinalRecordDisplay = function() {
-      const displayEl = document.getElementById('finalNoteContentDisplay');
-      if (!displayEl) return;
-
       const sSubj = document.getElementById('soapSubjectiveText')?.value || '';
       const sObj = document.getElementById('soapObjectiveText')?.value || '';
       const sAssess = document.getElementById('soapAssessmentText')?.value || '';
       const sPlan = document.getElementById('soapPlanText')?.value || '';
 
-      displayEl.innerText = `SUBJECTIVE:\n${sSubj}\n\nOBJECTIVE:\n${sObj}\n\nASSESSMENT:\n${sAssess}\n\nPLAN:\n${sPlan}`;
-      
-      const qVal = window.appScoreState.quality || 92;
+      const dSubj = document.getElementById('step7SubjectiveDisplay');
+      if (dSubj) dSubj.innerText = sSubj;
+      const dObj = document.getElementById('step7ObjectiveDisplay');
+      if (dObj) dObj.innerText = sObj;
+      const dAssess = document.getElementById('step7AssessmentDisplay');
+      if (dAssess) dAssess.innerText = sAssess;
+      const dPlan = document.getElementById('step7PlanDisplay');
+      if (dPlan) dPlan.innerText = sPlan;
+
+      // Update Step 7 Badges
+      const bObj = document.getElementById('step7ObjectiveBadge');
+      if (bObj) {
+        bObj.innerText = window.docPatchState.appliedLabs ? 'LOINC Labs Linked ✓' : 'Pending LOINC Labs';
+        bObj.className = window.docPatchState.appliedLabs 
+          ? 'text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded' 
+          : 'text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded';
+      }
+
+      const bAssess = document.getElementById('step7AssessmentBadge');
+      if (bAssess) {
+        bAssess.innerText = window.docPatchState.appliedAco ? 'ACO Specified ✓' : 'Needs Specificity';
+        bAssess.className = window.docPatchState.appliedAco 
+          ? 'text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded' 
+          : 'text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded';
+      }
+
+      const bPlan = document.getElementById('step7PlanBadge');
+      if (bPlan) {
+        bPlan.innerText = window.docPatchState.appliedPlan ? '7-Day Target Validated ✓' : 'Unspecified Duration';
+        bPlan.className = window.docPatchState.appliedPlan 
+          ? 'text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded' 
+          : 'text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded';
+      }
+
+      const qVal = window.appScoreState.quality || 68;
       const qEl = document.getElementById('finalAttestQuality');
       if (qEl) qEl.innerText = `${Math.round(qVal)}% Documentation Quality`;
+
+      const headerBadge = document.getElementById('finalHeaderBadge');
+      if (headerBadge) {
+        headerBadge.innerText = qVal >= 90 ? 'Ready for Signature • 92%' : `Draft Status • ${Math.round(qVal)}%`;
+        headerBadge.className = qVal >= 90 
+          ? 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200'
+          : 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200';
+      }
+
+      const metCount = 8 + (window.docPatchState.appliedLabs ? 1 : 0) + (window.docPatchState.appliedAco ? 1 : 0) + (window.docPatchState.appliedPlan ? 1 : 0);
+      const gapCount = 11 - metCount;
+      const critEl = document.getElementById('finalAttestCriteriaMet');
+      if (critEl) critEl.innerText = `${metCount}/11 Criteria Met • ${gapCount} Gaps`;
     };
 
     window.saveFinalRecord = function() {
@@ -1993,6 +2024,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     // Auto-initialize on DOM load
     document.addEventListener('DOMContentLoaded', () => {
       window.navigateTo(1);
+      window.updateGlobalScores();
     });
   </script>
 </body>
