@@ -7,12 +7,10 @@
   
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-
   <script>
 
     // ==============================================================
-    // GLOBAL APP STATE & SYNCHRONIZATION ENGINE
+    // BULLETPROOF ROUTER & STATE SYNCHRONIZATION ENGINE
     // ==============================================================
     window.appScoreState = {
       quality: 68,
@@ -30,7 +28,7 @@
     window.navigateTo = function(step) {
       const target = Math.min(Math.max(Number(step) || 1, 1), 7);
       currentStep = target;
-      
+
       for (let s = 1; s <= 7; s++) {
         const screenEl = document.getElementById('screen-' + s);
         if (screenEl) {
@@ -42,7 +40,7 @@
             screenEl.classList.add('hidden');
           }
         }
-        
+
         const sideBtn = document.getElementById('stepBtn-' + s);
         if (sideBtn) {
           const isActive = (s === target);
@@ -50,6 +48,10 @@
             ? 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-soft'
             : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
         }
+      }
+
+      if (target === 6) {
+        window.updateGlobalScores();
       }
 
       if (target === 7 && typeof updateFinalRecordDisplay === 'function') {
@@ -80,24 +82,24 @@
       let cons = 10;
 
       if (window.appScoreState.labAccepted) {
-        q += 10; // 78
-        r += 8;  // 80
+        q += 10;
+        r += 8;
         comp += 3;
         acc += 5;
         dComp += 8;
         conf += 4;
       }
       if (window.appScoreState.acoAccepted) {
-        q += 8;  // 86
-        r += 5;  // 85
+        q += 8;
+        r += 5;
         acc += 7;
         clar += 4;
         conf += 4;
         plaus += 2;
       }
       if (window.appScoreState.stewardshipAccepted) {
-        q += 6;  // 92
-        r += 4;  // 89
+        q += 6;
+        r += 4;
         comp += 3;
         clar += 4;
         org += 6;
@@ -131,9 +133,6 @@
       const qBadge = document.getElementById('step6QualityBadge');
       if (qBadge) {
         qBadge.innerText = q >= 90 ? `${q}% - Excellent` : q >= 75 ? `${q}% - In Review` : `${q}% - Deficient`;
-        qBadge.className = q >= 90 
-          ? 'text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full transition-all'
-          : 'text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full transition-all';
       }
 
       const valComp = document.getElementById('step6ValCompleteness');
@@ -182,8 +181,1604 @@
       if (barCons) barCons.style.width = cons + '%';
     };
 
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            clinical: {
+              50: '#F0FFFA',
+              100: '#CCFBF1',
+              200: '#99F6E4',
+              500: '#14B8A6',
+              600: '#0D9488',
+              700: '#0F766E',
+              800: '#115E59',
+              900: '#134E4A',
+            }
+          }
+        }
+      }
+    }
+  </script>
 
-function evaluateClinicalNote(note) {
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+    
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #F8FAFC;
+      color: #0F172A;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .card-hospital {
+      background: #FFFFFF;
+      border: 1px solid #E2E8F0;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.02);
+    }
+    .shadow-soft {
+      box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.05), 0 1px 4px -1px rgba(15, 23, 42, 0.03);
+    }
+    .shadow-soft-md {
+      box-shadow: 0 4px 16px -4px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
+    }
+    .badge-teal { background-color: #F0FFFA; color: #0F766E; border: 1px solid #99F6E4; }
+    .badge-emerald { background-color: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
+    .badge-amber { background-color: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; }
+    .badge-rose { background-color: #FFF1F2; color: #E11D48; border: 1px solid #FECDD3; }
+    .badge-blue { background-color: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; }
+    .badge-purple { background-color: #FAF5FF; color: #7E22CE; border: 1px solid #E9D5FF; }
+    
+    .fade-in { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes highlightPulse {
+      0% { background-color: #A7F3D0; }
+      50% { background-color: #D1FAE5; }
+      100% { background-color: #F8FAFC; }
+    }
+    .highlight-insert { animation: highlightPulse 1.8s ease-out; }
+    
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #FFFFFF !important; }
+      .print-area { border: none !important; box-shadow: none !important; width: 100% !important; }
+    }
+  </style>
+</head>
+<body class="bg-[#F8FAFC] text-slate-900 min-h-screen flex flex-col">
+
+  <!-- TOP APP BAR -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-soft no-print">
+    <div class="max-w-full mx-auto px-4 lg:px-6 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand & Search -->
+      <div class="flex items-center gap-4 lg:gap-6 flex-1 max-w-3xl">
+        <div class="flex items-center gap-2.5 shrink-0 cursor-pointer" onclick="navigateTo(1)">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-700 to-teal-900 flex items-center justify-center text-white shadow-soft">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="font-extrabold text-lg tracking-tight text-slate-900">DocIQ</span>
+              <span class="px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 text-[10px] font-bold border border-teal-200">EHR WORKSTATION</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative w-full max-w-md">
+          <input 
+            type="text" 
+            id="searchInput" 
+            oninput="handleSearch(this.value)"
+            placeholder="Search Patient, MRN (882934), ICD-10 (J18.9)..." 
+            class="w-full pl-9 pr-4 py-1.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:bg-white focus:border-teal-700 focus:ring-2 focus:ring-teal-100 transition-all"
+          />
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Action Indicators -->
+      <div class="flex items-center gap-3 shrink-0">
+        <div class="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 cursor-pointer" onclick="openFhirModal()">
+          <div class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></div>
+          <span class="text-xs font-bold text-emerald-800">FHIR R4 Connected</span>
+        </div>
+
+        <!-- Active Patient Pill (Sarah) -->
+        <button onclick="navigateTo(2)" class="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-teal-50 border border-teal-200 hover:bg-teal-100/60 transition-all text-left">
+          <div class="w-7 h-7 rounded-lg bg-teal-700 text-white flex items-center justify-center text-xs font-bold shadow-soft">SA</div>
+          <div>
+            <div class="text-xs font-bold text-slate-900 flex items-center gap-1">
+              <span>Sarah Al-Otaibi</span>
+              <span class="text-[9px] px-1 py-0.2 rounded bg-teal-200 text-teal-900 font-bold">Active Encounter</span>
+            </div>
+            <div class="text-[10px] text-slate-500">71y F • MRN 882934 • Room 402-B</div>
+          </div>
+        </button>
+
+        <!-- Audit Trail Button with Live Clinical Modification Counter -->
+        <button onclick="openModal('auditModal')" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-soft">
+          <svg class="w-3.5 h-3.5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span class="hidden sm:inline">Audit Trail</span>
+          <span id="auditHeaderCountBadge" class="px-1.5 py-0.2 rounded-full bg-teal-100 text-teal-800 text-[10px] font-mono font-bold">2</span>
+        </button>
+
+        <!-- Doctor Profile -->
+        <div class="flex items-center gap-2.5 pl-2 border-l border-slate-200">
+          <div class="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs">MD</div>
+          <div class="hidden xl:block text-left">
+            <div class="text-xs font-bold text-slate-900">Dr. Mohammed</div>
+            <div class="text-[10px] text-slate-500">Attending Physician</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- PERSISTENT LEFT 7-STEP SIDEBAR -->
+    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 hidden lg:flex no-print">
+      <div class="p-4 space-y-4 overflow-y-auto">
+        <div class="px-2 py-1">
+          <div class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">CLINICAL WORKFLOW</div>
+          <div class="text-xs text-slate-500">PRD 7-Step Pipeline</div>
+        </div>
+
+        <div class="space-y-1" id="sidebarSteps">
+          <!-- Step 1 -->
+          <button onclick="navigateTo(1)" id="stepBtn-1" class="w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-soft">
+            <div class="flex items-center gap-3">
+              <div class="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center bg-teal-700 text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+              </div>
+              <div>
+                <div class="text-xs font-bold">Encounters</div>
+                <div class="text-[10px] text-slate-500 font-normal">Active Patient Queue</div>
+              </div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-teal-100 text-teal-800">Step 1</span>
+          </button>
+
+          <!-- Step 2 -->
+          <button onclick="navigateTo(2)" id="stepBtn-2" class="w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent">
+            <div class="flex items-center gap-3">
+              <div class="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center bg-slate-100 text-slate-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              </div>
+              <div>
+                <div class="text-xs font-bold">Patient Record</div>
+                <div class="text-[10px] text-slate-500 font-normal">Demographics & Triage</div>
+              </div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-500">Step 2</span>
+          </button>
+
+          <!-- Step 3 -->
+          <button onclick="navigateTo(3)" id="stepBtn-3" class="w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent">
+            <div class="flex items-center gap-3">
+              <div class="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center bg-slate-100 text-slate-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              </div>
+              <div>
+                <div class="text-xs font-bold">Clinical Document</div>
+                <div class="text-[10px] text-slate-500 font-normal">EHR Note & Editor</div>
+              </div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-500">Step 3</span>
+          </button>
+
+          <!-- Step 4 -->
+          <button onclick="navigateTo(4)" id="stepBtn-4" class="w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent">
+            <div class="flex items-center gap-3">
+              <div class="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center bg-slate-100 text-slate-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+              </div>
+              <div>
+                <div class="text-xs font-bold">Clinical Review</div>
+                <div class="text-[10px] text-slate-500 font-normal">CAP Checklist & Missing Info</div>
+              </div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-500">Step 4</span>
+          </button>
+
+          <!-- Step 5 -->
+          <button onclick="navigateTo(5)" id="stepBtn-5" class="w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent">
+            <div class="flex items-center gap-3">
+              <div class="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center bg-slate-100 text-slate-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              </div>
+              <div>
+                <div class="text-xs font-bold">AI Recommendations</div>
+                <div class="text-[10px] text-slate-500 font-normal">Clinical Decision Support</div>
+              </div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-500">Step 5</span>
+          </button>
+
+          <!-- Step 6 -->
+          <button onclick="navigateTo(6)" id="stepBtn-6" class="w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent">
+            <div class="flex items-center gap-3">
+              <div class="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center bg-slate-100 text-slate-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+              </div>
+              <div>
+                <div class="text-xs font-bold">Dual Scores</div>
+                <div class="text-[10px] text-slate-500 font-normal">Quality & Research Readiness</div>
+              </div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-500">Step 6</span>
+          </button>
+
+          <!-- Step 7 -->
+          <button onclick="navigateTo(7)" id="stepBtn-7" class="w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent">
+            <div class="flex items-center gap-3">
+              <div class="w-7 h-7 rounded-lg shrink-0 flex items-center justify-center bg-slate-100 text-slate-500">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              </div>
+              <div>
+                <div class="text-xs font-bold">Finalize Record</div>
+                <div class="text-[10px] text-slate-500 font-normal">Sign & Save in EHR</div>
+              </div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-500">Step 7</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bottom FHIR Bridge -->
+      <div class="p-4 border-t border-slate-200 space-y-3">
+        <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-extrabold text-slate-400 uppercase">EHR Bridge</span>
+            <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 text-[9px] font-bold border border-emerald-200">Active</span>
+          </div>
+          <div class="text-xs font-bold text-slate-800">HL7 FHIR R4 / USCDI 6.0</div>
+          <button onclick="openFhirModal()" class="w-full py-1.5 px-2.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-soft cursor-pointer">
+            <svg class="w-3.5 h-3.5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zm0 5h16"/></svg>
+            <span>Inspect FHIR JSON</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN VIEWPORT -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+      
+      <!-- STEP 1: ENCOUNTERS -->
+      <div id="screen-1" class="space-y-6 max-w-7xl mx-auto fade-in">
+        <div class="card-hospital p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-xl font-bold text-slate-900">Encounters Queue</h1>
+              <span class="px-2 py-0.5 rounded text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">5 Active Inpatients</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">
+              Active patient triage, real-time documentation quality, and ATS/IDSA clinical risk stratification.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button onclick="filterQueue('All')" id="filterBtn-All" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-700 text-white shadow-soft transition-all">All (5)</button>
+            <button onclick="filterQueue('Internal Medicine')" id="filterBtn-Internal Medicine" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all">Internal Medicine (2)</button>
+            <button onclick="filterQueue('Cardiology')" id="filterBtn-Cardiology" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all">Cardiology (2)</button>
+            <button onclick="filterQueue('Surgery')" id="filterBtn-Surgery" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all">Surgery (1)</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="patientsGrid">
+          <!-- Sarah Al-Otaibi -->
+          <div class="card-hospital p-5 flex flex-col justify-between gap-4 border-2 border-teal-700 ring-2 ring-teal-100 patient-card relative overflow-hidden" data-dept="Internal Medicine" data-name="Sarah Al-Otaibi" data-mrn="882934">
+            <div class="absolute top-0 right-0 bg-teal-700 text-white text-[9px] font-extrabold uppercase px-3 py-0.5 rounded-bl-lg tracking-wider">
+              Primary Demo Anchor
+            </div>
+
+            <div class="space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                    <span>Sarah Al-Otaibi</span>
+                    <span class="text-[10px] font-bold text-teal-800">Day 3</span>
+                  </div>
+                  <div class="text-xs text-slate-500">71y • Female • MRN <strong class="font-mono text-slate-800">882934</strong></div>
+                </div>
+                <span id="queuePatientBadge-1" class="px-2 py-0.5 rounded text-[10px] font-bold badge-amber">Action Required (68%)</span>
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <div class="text-[10px] font-bold text-slate-400 uppercase">Primary Diagnosis</div>
+                <div class="text-xs font-bold text-slate-800">Community-Acquired Pneumonia (CAP)</div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                  <span>Room: <strong class="text-slate-700">402-B</strong> • Internal Medicine</span>
+                </div>
+              </div>
+
+              <div class="space-y-2 pt-1">
+                <div>
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-500">Documentation Quality</span>
+                    <span class="font-bold text-slate-800" id="queueDocScore-1">68%</span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden mt-1">
+                    <div class="h-full bg-amber-500 transition-all duration-500" id="queueDocBar-1" style="width: 68%;"></div>
+                  </div>
+                </div>
+                <div>
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-500">Research Readiness</span>
+                    <span class="font-bold text-emerald-800" id="queueResearchScore-1">72%</span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden mt-1">
+                    <div class="h-full bg-emerald-600 transition-all duration-500" id="queueResearchBar-1" style="width: 72%;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-1.5">
+                <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-medium" id="queueTag-labs">Pending LIS Labs</span>
+                <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium" id="queueTag-aco">ACO Specificity Needed</span>
+                <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium">CURB-65 = 1</span>
+              </div>
+            </div>
+
+            <button onclick="navigateTo(3)" class="w-full py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 text-white shadow-soft transition-all cursor-pointer">
+              <span>Open Clinical Document (Step 3)</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+
+          <!-- Fatima Al-Harbi -->
+          <div class="card-hospital p-5 flex flex-col justify-between gap-4 patient-card" data-dept="Cardiology" data-name="Fatima Al-Harbi" data-mrn="990238">
+            <div class="space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-bold text-sm text-slate-900">Fatima Al-Harbi</div>
+                  <div class="text-xs text-slate-500">64y • Female • MRN <strong class="font-mono text-slate-800">990238</strong></div>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold badge-amber">In Review</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <div class="text-[10px] font-bold text-slate-400 uppercase">Primary Diagnosis</div>
+                <div class="text-xs font-bold text-slate-800">Acute Decompensated Heart Failure</div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                  <span>Room: <strong class="text-slate-700">204-C</strong> • Cardiology</span>
+                </div>
+              </div>
+              <div class="space-y-2 pt-1">
+                <div class="flex items-center justify-between text-xs"><span class="text-slate-500">Quality</span><span class="font-bold text-slate-800">82%</span></div>
+                <div class="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden"><div class="h-full bg-teal-700" style="width: 82%;"></div></div>
+              </div>
+            </div>
+            <button onclick="showToast('Demo Scope', 'Please select Sarah Al-Otaibi to experience the full 7-step pipeline.', 'info')" class="w-full py-2 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all">
+              <span>View Record</span>
+            </button>
+          </div>
+
+          <!-- Mohammed Al-Ghamdi -->
+          <div class="card-hospital p-5 flex flex-col justify-between gap-4 patient-card" data-dept="Internal Medicine" data-name="Mohammed Al-Ghamdi" data-mrn="128472">
+            <div class="space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-bold text-sm text-slate-900">Mohammed Al-Ghamdi</div>
+                  <div class="text-xs text-slate-500">58y • Male • MRN <strong class="font-mono text-slate-800">128472</strong></div>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold badge-emerald">Compliant</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <div class="text-[10px] font-bold text-slate-400 uppercase">Primary Diagnosis</div>
+                <div class="text-xs font-bold text-slate-800">Acute Exacerbation of Bronchial Asthma</div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                  <span>Room: <strong class="text-slate-700">310-A</strong> • Internal Medicine</span>
+                </div>
+              </div>
+              <div class="space-y-2 pt-1">
+                <div class="flex items-center justify-between text-xs"><span class="text-slate-500">Quality</span><span class="font-bold text-emerald-800">95%</span></div>
+                <div class="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden"><div class="h-full bg-emerald-600" style="width: 95%;"></div></div>
+              </div>
+            </div>
+            <button onclick="showToast('Demo Scope', 'Please select Sarah Al-Otaibi to experience the full 7-step pipeline.', 'info')" class="w-full py-2 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all">
+              <span>View Record</span>
+            </button>
+          </div>
+
+          <!-- Abdullah Al-Shehri -->
+          <div class="card-hospital p-5 flex flex-col justify-between gap-4 patient-card" data-dept="Surgery" data-name="Abdullah Al-Shehri" data-mrn="447190">
+            <div class="space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-bold text-sm text-slate-900">Abdullah Al-Shehri</div>
+                  <div class="text-xs text-slate-500">82y • Male • MRN <strong class="font-mono text-slate-800">447190</strong></div>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold badge-rose">Critical Gaps</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <div class="text-[10px] font-bold text-slate-400 uppercase">Primary Diagnosis</div>
+                <div class="text-xs font-bold text-slate-800">Post-Op Colectomy Sepsis</div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                  <span>Room: <strong class="text-slate-700">108-D</strong> • Surgery</span>
+                </div>
+              </div>
+              <div class="space-y-2 pt-1">
+                <div class="flex items-center justify-between text-xs"><span class="text-slate-500">Quality</span><span class="font-bold text-rose-800">58%</span></div>
+                <div class="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden"><div class="h-full bg-rose-600" style="width: 58%;"></div></div>
+              </div>
+            </div>
+            <button onclick="showToast('Demo Scope', 'Please select Sarah Al-Otaibi to experience the full 7-step pipeline.', 'info')" class="w-full py-2 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all">
+              <span>View Record</span>
+            </button>
+          </div>
+
+          <!-- Noura Al-Dossari -->
+          <div class="card-hospital p-5 flex flex-col justify-between gap-4 patient-card" data-dept="Cardiology" data-name="Noura Al-Dossari" data-mrn="551209">
+            <div class="space-y-3">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="font-bold text-sm text-slate-900">Noura Al-Dossari</div>
+                  <div class="text-xs text-slate-500">49y • Female • MRN <strong class="font-mono text-slate-800">551209</strong></div>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold badge-amber">In Review</span>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                <div class="text-[10px] font-bold text-slate-400 uppercase">Primary Diagnosis</div>
+                <div class="text-xs font-bold text-slate-800">Atrial Fibrillation with RVR</div>
+                <div class="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                  <span>Room: <strong class="text-slate-700">202-A</strong> • Cardiology</span>
+                </div>
+              </div>
+              <div class="space-y-2 pt-1">
+                <div class="flex items-center justify-between text-xs"><span class="text-slate-500">Quality</span><span class="font-bold text-slate-800">78%</span></div>
+                <div class="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden"><div class="h-full bg-teal-700" style="width: 78%;"></div></div>
+              </div>
+            </div>
+            <button onclick="showToast('Demo Scope', 'Please select Sarah Al-Otaibi to experience the full 7-step pipeline.', 'info')" class="w-full py-2 rounded-xl font-bold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all">
+              <span>View Record</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: PATIENT RECORD -->
+      <div id="screen-2" class="space-y-6 max-w-6xl mx-auto fade-in hidden">
+        <div class="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto pb-1">
+          <button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
+          <span>›</span>
+          <span class="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">Step 2: Patient Record</span>
+          <span>›</span>
+          <button onclick="navigateTo(3)" class="hover:text-teal-700">Step 3: Clinical Document</button>
+        </div>
+
+        <div class="card-hospital p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-800 font-extrabold text-xl">SA</div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-xl font-bold text-slate-900">Sarah Al-Otaibi</h2>
+                <span class="px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-700">71y F</span>
+                <span class="px-2 py-0.5 rounded text-xs font-bold badge-teal">Inpatient Day 3</span>
+              </div>
+              <div class="text-xs text-slate-500 flex flex-wrap items-center gap-3 mt-1">
+                <span>MRN: <strong class="font-mono text-slate-800">882934</strong></span>
+                <span>•</span>
+                <span>Admission: <strong class="text-slate-800">2026-08-16</strong></span>
+                <span>•</span>
+                <span>Room: <strong class="text-slate-800">402-B</strong></span>
+                <span>•</span>
+                <span>Attending: <strong class="text-slate-800">Dr. Mohammed</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <button onclick="navigateTo(3)" class="px-5 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-soft flex items-center gap-2 transition-all cursor-pointer">
+            <span>Open Step 3: Clinical Document</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+
+        <!-- 4 Bedside Vitals Telemetry Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="card-hospital p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase">Blood Pressure</span>
+            <div class="text-lg font-extrabold text-slate-900">118 / 74</div>
+            <div class="text-[10px] text-emerald-800 font-bold">Normotensive</div>
+          </div>
+          <div class="card-hospital p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase">Heart Rate</span>
+            <div class="text-lg font-extrabold text-slate-900">78 bpm</div>
+            <div class="text-[10px] text-emerald-800 font-bold">Normal Sinus</div>
+          </div>
+          <div class="card-hospital p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase">Temperature</span>
+            <div class="text-lg font-extrabold text-slate-900">37.1 °C</div>
+            <div class="text-[10px] text-emerald-800 font-bold">Afebrile (>24h)</div>
+          </div>
+          <div class="card-hospital p-4">
+            <span class="text-[10px] font-bold text-slate-400 uppercase">O2 Saturation</span>
+            <div class="text-lg font-extrabold text-slate-900">98%</div>
+            <div class="text-[10px] text-emerald-800 font-bold">Room Air (Off O2)</div>
+          </div>
+        </div>
+
+        <!-- Labs & Imaging -->
+        <div class="card-hospital p-6 space-y-4">
+          <div class="font-bold text-sm text-slate-900">Cerner LIS Synchronized Lab Results (Aug 18):</div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-slate-500 font-medium">White Blood Cells (WBC)</span>
+              <div class="text-base font-bold text-emerald-800 font-mono mt-0.5">8.2 x 10^9/L</div>
+              <div class="text-[11px] text-slate-500">Admission: 14.1 (Resolved)</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-slate-500 font-medium">C-Reactive Protein (CRP)</span>
+              <div class="text-base font-bold text-emerald-800 font-mono mt-0.5">6.5 mg/L</div>
+              <div class="text-[11px] text-slate-500">Admission: 45.0 (85% Drop)</div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+              <span class="text-slate-500 font-medium">Procalcitonin</span>
+              <div class="text-base font-bold text-emerald-800 font-mono mt-0.5">0.11 ng/mL</div>
+              <div class="text-[11px] text-slate-500">Normal Range < 0.25 ng/mL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3: CLINICAL DOCUMENT (SOAP WORKSTATION) -->
+      <div id="screen-3" class="space-y-6 max-w-7xl mx-auto fade-in hidden">
+        <div class="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto pb-1">
+          <button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
+          <span>›</span>
+          <button onclick="navigateTo(2)" class="hover:text-teal-700">Step 2: Patient Record</button>
+          <span>›</span>
+          <span class="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+            Step 3: Clinical Document (EHR Note & Editor)
+          </span>
+          <span>›</span>
+          <button onclick="navigateTo(4)" class="hover:text-teal-700">Step 4: Clinical Review</button>
+        </div>
+
+        <div class="card-hospital p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-l-teal-700">
+          <div>
+            <div class="flex items-center gap-2.5">
+              <h2 class="text-xl font-bold text-slate-900">Clinical Progress Note & Step-Down Order</h2>
+              <span class="px-2 py-0.5 rounded text-xs font-bold badge-teal">Day 3 Inpatient</span>
+              <span id="autoSaveIndicator" class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>Auto-Saved • EHR Cache</span>
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">
+              Patient: <strong>Sarah Al-Otaibi (MRN: 882934)</strong> • Powered by strict <code>evaluateClinicalNote</code> PRD engine with dynamic two-way reactivity.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="resetToRawDraft()" class="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold rounded-xl transition-all shadow-soft cursor-pointer flex items-center gap-1.5">
+              <span>↺ Reset to Draft (68%)</span>
+            </button>
+            <button onclick="quickFillOptimalNote()" class="px-3 py-2 bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-bold rounded-xl transition-all shadow-soft cursor-pointer flex items-center gap-1.5">
+              <span>⚡ Quick-Fill (92%)</span>
+            </button>
+            <button 
+              id="btnProceedStep4"
+              onclick="handleProceedStep4()" 
+              class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-soft flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <span>Step 4: Clinical Review →</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div class="lg:col-span-7 card-hospital p-6 space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
+              <div class="flex items-center gap-1.5 text-xs text-slate-500 font-bold">
+                <span class="text-slate-900">Macros:</span>
+                <button onclick="insertMacro('.vitals')" class="px-2 py-1 rounded bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-[11px]">.vitals</button>
+                <button onclick="insertMacro('.labs')" class="px-2 py-1 rounded bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-[11px]">.labs</button>
+                <button onclick="insertMacro('.curb65')" class="px-2 py-1 rounded bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-[11px]">.curb65</button>
+                <button onclick="insertMacro('.stewardship')" class="px-2 py-1 rounded bg-slate-100 hover:bg-teal-50 hover:text-teal-800 text-[11px]">.stewardship</button>
+              </div>
+
+              <div class="text-[11px] text-slate-400 font-mono" id="wordCountDisplay">
+                Words: 110 • Characters: 742
+              </div>
+            </div>
+
+            <!-- 1. Subjective -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-teal-700"></span>
+                  <span>1. Subjective (HPI, ROS, Interval History)</span>
+                </label>
+                <span id="subjectiveStatusBadge" class="text-[10px] font-bold badge-teal px-2 py-0.5 rounded">HPI Recorded</span>
+              </div>
+              <textarea 
+                id="subjectiveTextarea" 
+                oninput="handleDoctorInput('Subjective')" 
+                class="w-full p-3.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-teal-700 focus:ring-2 focus:ring-teal-100 focus:outline-none leading-relaxed transition-all resize-y" 
+                rows="3"
+              >71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.</textarea>
+              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono px-1">
+                <span id="subjCounter">Character count: 215 | Matched CAP Elements: 8/11</span>
+                <span class="text-teal-700 font-semibold" id="subjAlertNote">Interval History Documented</span>
+              </div>
+            </div>
+
+            <!-- 2. Objective -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-teal-700"></span>
+                  <span>2. Objective (Vitals, Physical Exam & Lab Findings)</span>
+                </label>
+                <span id="objectiveStatusBadge" class="text-[10px] font-bold badge-amber px-2 py-0.5 rounded">LIS Biomarkers Pending</span>
+              </div>
+
+              <div id="objDiffContainer" class="space-y-2 text-xs">
+                <div id="objBeforeBadge" class="p-3 rounded-xl border border-amber-300 bg-amber-50/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-all">
+                  <div class="flex items-start gap-2">
+                    <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-extrabold text-[9px] uppercase shrink-0">Missing In Note</span>
+                    <span class="text-amber-900 text-[11px] font-medium leading-relaxed">Cerner LIS Batch: WBC 8.2 x10^9/L, CRP 6.5 mg/L, Procalcitonin 0.11 ng/mL</span>
+                  </div>
+                  <button 
+                    id="btnAcceptLabs"
+                    onclick="acceptLabIngestion()" 
+                    class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-soft shrink-0 transition-all cursor-pointer hover:scale-105"
+                  >
+                    <span>[+ Insert Cerner LIS Biomarkers]</span>
+                  </button>
+                </div>
+
+                <div id="objAfterBadge" class="p-2.5 rounded-lg border border-emerald-300 bg-emerald-50/90 items-start gap-2 hidden">
+                  <span class="px-1.5 py-0.5 rounded bg-emerald-600 text-white font-extrabold text-[9px] uppercase shrink-0">Ingested ✓</span>
+                  <span class="text-emerald-900 text-[11px] font-medium leading-relaxed">LOINC Biomarkers: WBC 8.2 x 10^9/L, CRP 6.5 mg/L, Procalcitonin 0.11 ng/mL (Resolved)</span>
+                </div>
+              </div>
+
+              <textarea 
+                id="objectiveTextarea" 
+                oninput="handleDoctorInput('Objective')" 
+                class="w-full p-3.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-teal-700 focus:ring-2 focus:ring-teal-100 focus:outline-none leading-relaxed transition-all font-medium resize-y" 
+                rows="5"
+              >Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.
+Physical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.</textarea>
+              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono px-1">
+                <span id="objCounter">Character count: 218 | Matched CAP Elements: 8/11</span>
+                <span class="text-amber-700 font-semibold" id="objKineticsText">Click [+ Insert] to raise score to 78%</span>
+              </div>
+            </div>
+
+            <!-- 3. Assessment -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-teal-700"></span>
+                  <span>3. Assessment & Clinical Problem List</span>
+                </label>
+                <span id="assessmentStatusBadge" class="text-[10px] font-bold badge-amber px-2 py-0.5 rounded">ACO Specificity Needed</span>
+              </div>
+
+              <div id="assessDiffContainer" class="space-y-2 text-xs">
+                <div id="assessBeforeBadge" class="p-3 rounded-xl border border-amber-300 bg-amber-50/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-all">
+                  <div class="flex items-start gap-2">
+                    <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-extrabold text-[9px] uppercase shrink-0">Coding Gap</span>
+                    <span class="text-amber-900 text-[11px] font-medium">Mild Asthma (Unspecified chronic airway disease)</span>
+                  </div>
+                  <button 
+                    id="btnAcceptAco"
+                    onclick="acceptAcoSpecificity()" 
+                    class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-soft shrink-0 transition-all cursor-pointer hover:scale-105"
+                  >
+                    <span>[+ Clarify Comorbidity Specificity]</span>
+                  </button>
+                </div>
+
+                <div id="assessAfterBadge" class="p-2.5 rounded-lg border border-emerald-300 bg-emerald-50/90 items-start gap-2 hidden">
+                  <span class="px-1.5 py-0.5 rounded bg-emerald-600 text-white font-extrabold text-[9px] uppercase shrink-0">Optimized ✓</span>
+                  <span class="text-emerald-900 text-[11px] font-medium">Asthma-COPD Overlap (ACO) - ICD-10 J44.9 / J45.30 Specified</span>
+                </div>
+              </div>
+
+              <textarea 
+                id="assessmentTextarea" 
+                oninput="handleDoctorInput('Assessment')" 
+                class="w-full p-3.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-teal-700 focus:ring-2 focus:ring-teal-100 focus:outline-none leading-relaxed transition-all resize-y" 
+                rows="3"
+              >1. Community-Acquired Pneumonia (CAP) - Improving.
+2. Mild Asthma - Stable.
+3. Hypertension - Controlled.</textarea>
+              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono px-1">
+                <span id="assessCounter">Character count: 104 | Matched CAP Elements: 8/11</span>
+                <span class="text-teal-700 font-semibold" id="assessIcdText">Click [+ Clarify] to raise score to 86%</span>
+              </div>
+            </div>
+
+            <!-- 4. Plan -->
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-teal-700"></span>
+                  <span>4. Plan (Antimicrobial Stewardship & Step-Down)</span>
+                </label>
+                <span id="planStatusBadge" class="text-[10px] font-bold badge-amber px-2 py-0.5 rounded">Duration Vague</span>
+              </div>
+
+              <div id="planDiffContainer" class="space-y-2 text-xs">
+                <div id="planBeforeBadge" class="p-3 rounded-xl border border-amber-300 bg-amber-50/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-all">
+                  <div class="flex items-start gap-2">
+                    <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 font-extrabold text-[9px] uppercase shrink-0">Stewardship Gap</span>
+                    <span class="text-amber-900 text-[11px] font-medium">Continue antibiotic therapy (duration unquantified)</span>
+                  </div>
+                  <button 
+                    id="btnAcceptPlan"
+                    onclick="acceptStewardshipPlan()" 
+                    class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-soft shrink-0 transition-all cursor-pointer hover:scale-105"
+                  >
+                    <span>[+ Apply ATS/IDSA 7-Day Plan]</span>
+                  </button>
+                </div>
+
+                <div id="planAfterBadge" class="p-2.5 rounded-lg border border-emerald-300 bg-emerald-50/90 items-start gap-2 hidden">
+                  <span class="px-1.5 py-0.5 rounded bg-emerald-600 text-white font-extrabold text-[9px] uppercase shrink-0">Compliant ✓</span>
+                  <span class="text-emerald-900 text-[11px] font-medium">ATS/IDSA Step-down: Oral Amoxicillin/Clavulanate 875/125mg PO BID (7-day course target)</span>
+                </div>
+              </div>
+
+              <textarea 
+                id="planTextarea" 
+                oninput="handleDoctorInput('Plan')" 
+                class="w-full p-3.5 text-xs rounded-xl bg-slate-50 border border-slate-200 focus:bg-white focus:border-teal-700 focus:ring-2 focus:ring-teal-100 focus:outline-none leading-relaxed transition-all resize-y" 
+                rows="3"
+              >- Continue IV antibiotics and supportive respiratory care.
+- Monitor vitals.
+- Plan discharge when clinically ready.</textarea>
+              <div class="flex justify-between items-center text-[10px] text-slate-400 font-mono px-1">
+                <span id="planCounter">Character count: 128 | Matched CAP Elements: 8/11</span>
+                <span class="text-amber-700 font-semibold" id="planDurationText">Click [+ Apply] to reach 92% (Compliant)</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- RIGHT: LIVE DYNAMIC DOCIQ INTELLIGENCE GAUGES -->
+          <div class="lg:col-span-5 flex flex-col gap-6">
+            <div class="card-hospital p-6 space-y-4">
+              <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div class="flex items-center gap-2">
+                  <svg class="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                  <span class="font-bold text-sm text-slate-900">DocIQ Intelligence Gauge</span>
+                </div>
+                <span id="aiScoreBadge" class="px-2 py-0.5 rounded text-xs font-bold badge-amber transition-all">68% (Needs Attention)</span>
+              </div>
+
+              <div class="flex items-center gap-5 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div class="w-20 h-20 rounded-full bg-amber-50 border-8 border-amber-500 flex flex-col items-center justify-center shrink-0 shadow-soft transition-all duration-500" id="gaugeCircleBorder">
+                  <span id="aiGaugeNumber" class="text-2xl font-extrabold text-amber-800 transition-all">68%</span>
+                  <span class="text-[9px] font-bold text-amber-700" id="gaugeSubLabel">DEFICIENT</span>
+                </div>
+                <div class="space-y-1 text-xs">
+                  <div class="font-bold text-slate-900">Live PRD Evaluation Engine</div>
+                  <p id="aiGaugeDesc" class="text-slate-500 leading-relaxed text-[11px]">
+                    Accept the 3 AI suggestions on the left to elevate documentation to <strong>92% (Excellent)</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <div class="space-y-2 text-xs">
+                <div class="flex justify-between py-1 border-b border-slate-100">
+                  <span class="text-slate-500">1. Completeness Weight (40%)</span>
+                  <strong class="text-slate-800" id="weightCompleteness">29.09 pts (8/11 items)</strong>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-100">
+                  <span class="text-slate-500">2. Diagnostic Precision (20%)</span>
+                  <strong class="text-slate-800" id="weightClarity">13.00 pts</strong>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-100">
+                  <span class="text-slate-500">3. Consistency & Logic (20%)</span>
+                  <strong class="text-slate-800" id="weightConsistency">12.00 pts</strong>
+                </div>
+                <div class="flex justify-between py-1">
+                  <span class="text-slate-500">4. SOAP Structure (20%)</span>
+                  <strong class="text-slate-800" id="weightOrg">20.00 pts</strong>
+                </div>
+              </div>
+            </div>
+
+            <div id="alertsContainer" class="card-hospital p-5 space-y-3 bg-amber-50/60 border-amber-300 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-amber-900">Documentation Gaps & Action Items</span>
+                <span id="gapsCountBadge" class="text-[10px] font-bold badge-amber px-2 py-0.5 rounded">3 Actions Pending</span>
+              </div>
+              <div id="alertsMessage" class="text-xs text-amber-900 font-medium leading-relaxed space-y-1.5">
+                <p>• <strong>Objective:</strong> Inflammatory kinetics (WBC & CRP) missing from progress note.</p>
+                <p>• <strong>Assessment:</strong> Asthma-COPD Overlap specificity unstated (needed for RWE registry).</p>
+                <p>• <strong>Plan:</strong> Oral step-down dosing target (7 days) unquantified.</p>
+              </div>
+            </div>
+
+            <div class="card-hospital p-5 space-y-2.5 bg-teal-50/30 border-teal-200">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-teal-800 flex items-center gap-1.5">
+                <span>🛡️ Official ATS/IDSA CAP Criteria</span>
+              </div>
+              <div class="space-y-1.5 text-xs text-slate-700">
+                <p>• <strong>Biomarkers:</strong> CRP 6.5 mg/L (85% reduction) clears patient for step-down.</p>
+                <p>• <strong>Stewardship:</strong> 7-day target (Amox/Clav 875/125mg PO BID).</p>
+                <p>• <strong>Severity:</strong> CURB-65 = 1 safely managed in ward.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 4: CLINICAL REVIEW (CAP CHECKLIST) -->
+      <div id="screen-4" class="space-y-6 max-w-6xl mx-auto fade-in hidden">
+        <div class="card-hospital p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-xl font-bold text-slate-900">Step 4: Clinical Review & CAP Checklist</h2>
+              <span class="px-2 py-0.5 rounded text-xs font-bold badge-teal">ATS/IDSA Criteria</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">11-Point CAP documentation checklist dynamically evaluated by <code>evaluateClinicalNote</code>.</p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <div class="text-xs font-bold text-slate-800" id="ckSummaryText">8 / 11 Completed (73%)</div>
+              <div class="w-32 h-2 rounded-full bg-slate-100 overflow-hidden mt-1">
+                <div class="h-full bg-amber-500 transition-all duration-500" id="ckSummaryBar" style="width: 73%;"></div>
+              </div>
+            </div>
+            <button onclick="navigateTo(5)" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-soft flex items-center gap-1.5 transition-all cursor-pointer">
+              <span>Step 5: AI Recommendations →</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="checklistDetailedList"></div>
+      </div>
+
+      <!-- STEP 5: AI RECOMMENDATIONS & CDS -->
+      <div id="screen-5" class="space-y-6 max-w-7xl mx-auto fade-in hidden">
+        <div class="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto pb-1">
+          <button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
+          <span>›</span>
+          <button onclick="navigateTo(3)" class="hover:text-teal-700">Step 3: Clinical Document</button>
+          <span>›</span>
+          <button onclick="navigateTo(4)" class="hover:text-teal-700">Step 4: Clinical Review</button>
+          <span>›</span>
+          <span class="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+            Step 5: AI Recommendations & Clinical Decision Support (CDS)
+          </span>
+          <span>›</span>
+          <button onclick="navigateTo(6)" class="hover:text-teal-700">Step 6: Dual Scores</button>
+        </div>
+
+        <div class="card-hospital p-6 space-y-4 border-l-4 border-l-teal-700">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-teal-700 text-white flex items-center justify-center font-bold text-sm shadow-soft">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                </div>
+                <h2 class="text-xl font-bold text-slate-900">Clinical Decision Support & Stewardship Hub</h2>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold badge-teal">ATS/IDSA Certified</span>
+              </div>
+              <p class="text-xs text-slate-600 mt-1">
+                Real-time Evidence-Based CDS • 3 Tailored Interventions for <strong>Sarah Al-Otaibi (MRN: 882934)</strong>
+              </p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 shadow-soft">
+                <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                <span>Protocol Compliance: 100% (ATS/IDSA Aligned)</span>
+              </div>
+              <div class="px-3 py-1.5 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold flex items-center gap-1.5 shadow-soft">
+                <span class="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
+                <span>Stewardship: Step-Down Qualified (Afebrile >24h)</span>
+              </div>
+              <div class="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold flex items-center gap-1.5 shadow-soft">
+                <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                <span>Research Fit: USCDI v6.0 Verified</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Card 1 -->
+          <div class="card-hospital p-6 flex flex-col justify-between gap-5 border-t-4 border-t-teal-700 shadow-soft hover:shadow-soft-md transition-all">
+            <div class="space-y-4">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 flex items-center justify-center font-bold text-lg">💊</div>
+                  <div>
+                    <h3 class="font-extrabold text-sm text-slate-900">Antimicrobial Stewardship</h3>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold badge-emerald">Grade A Evidence • ATS/IDSA</span>
+                  </div>
+                </div>
+              </div>
+              <div class="space-y-2.5 text-xs">
+                <div class="p-3 rounded-xl bg-amber-50/80 border border-amber-200 space-y-1">
+                  <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-900">Current Inpatient Regimen:</span>
+                  <div class="font-bold text-slate-900">IV Ceftriaxone 1g IV Q24H (Day 3)</div>
+                  <div class="text-[11px] text-amber-900 font-semibold flex items-center gap-1">
+                    <span>⚠️ Flagged for early oral step-down conversion</span>
+                  </div>
+                </div>
+                <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 space-y-1">
+                  <span class="text-[10px] font-extrabold uppercase tracking-wider text-emerald-900">AI Step-Down Target:</span>
+                  <div class="font-bold text-emerald-950 text-xs leading-relaxed">
+                    Amoxicillin-Clavulanate 875/125mg PO BID
+                  </div>
+                  <div class="text-[11px] text-emerald-800">
+                    Target Duration: <strong class="text-emerald-950">7 Days Total</strong> (Complete 4 days outpatient).
+                  </div>
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1 text-xs">
+                <div class="text-[10px] font-bold text-slate-400 uppercase">Clinical Stability Rationale</div>
+                <p class="text-slate-700 leading-relaxed text-[11px]">
+                  Patient is hemodynamically normotensive (118/74), afebrile x 24h (37.1 °C), SpO2 98% on room air, and CRP dropped by <strong>85% (from 45 to 6.5 mg/L)</strong>.
+                </p>
+              </div>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-2 pt-2 border-t border-slate-100">
+              <button onclick="acceptStewardshipPlan();" class="w-full py-2 px-3 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-soft transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                <span>✓ Accept & Insert into Plan</span>
+              </button>
+              <button onclick="showToast('Dosing Protocol', 'Standard ATS/IDSA dosage: 875/125mg PO BID adjusted for normal creatinine clearance.', 'info')" class="w-full sm:w-auto py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer whitespace-nowrap">
+                <span>Customize Dose</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="card-hospital p-6 flex flex-col justify-between gap-5 border-t-4 border-t-teal-700 shadow-soft hover:shadow-soft-md transition-all">
+            <div class="space-y-4">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-10 h-10 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 flex items-center justify-center font-bold text-lg">🫁</div>
+                  <div>
+                    <h3 class="font-extrabold text-sm text-slate-900">Pulmonary Care & ACO Follow-Up</h3>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold badge-teal">Grade B Evidence • GOLD 2024</span>
+                  </div>
+                </div>
+              </div>
+              <div class="space-y-2.5 text-xs">
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                  <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Target Chronic Condition:</span>
+                  <div class="font-bold text-slate-900">Asthma-COPD Overlap (ACO)</div>
+                  <div class="text-[11px] text-teal-800 font-mono font-bold">ICD-10 J44.9 / J45.30 Specified</div>
+                </div>
+                <div class="p-3 rounded-xl bg-teal-50/60 border border-teal-200 space-y-1.5 text-xs">
+                  <span class="text-[10px] font-extrabold uppercase tracking-wider text-teal-900">Recommended Follow-Up Protocol:</span>
+                  <p class="text-slate-800 text-[11px] leading-relaxed">
+                    • Schedule outpatient spirometry & inhaler technique review within <strong>5–7 days post-discharge</strong>.<br/>
+                    • Continue home maintenance: Inhaled Corticosteroid + LABA.
+                  </p>
+                </div>
+              </div>
+              <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1 text-xs">
+                <div class="text-[10px] font-bold text-slate-400 uppercase">30-Day Readmission Prevention</div>
+                <p class="text-slate-700 leading-relaxed text-[11px]">
+                  Early pulmonary clinic follow-up within 7 days reduces 30-day post-pneumonia readmissions by <strong>34%</strong> in elderly patients with chronic airway obstruction.
+                </p>
+              </div>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center gap-2 pt-2 border-t border-slate-100">
+              <button onclick="showToast('Pulmonary Consult Ordered', 'Outpatient follow-up consult booked for Pulmonary Clinic in 6 days.', 'success')" class="w-full py-2 px-3 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-soft transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                <span>✓ Order Pulmonary Consult</span>
+              </button>
+              <button onclick="showToast('Acknowledged', 'Care coordination recommendation acknowledged.', 'info')" class="w-full sm:w-auto py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all cursor-pointer">
+                <span>Acknowledge</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="card-hospital p-6 flex flex-col justify-between gap-5 border-t-4 border-t-teal-700 shadow-soft hover:shadow-soft-md transition-all">
+            <div class="space-y-4">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-800 border border-blue-200 flex items-center justify-center font-bold text-lg">📊</div>
+                  <div>
+                    <h3 class="font-extrabold text-sm text-slate-900">RWE Registry & USCDI Readiness</h3>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold badge-blue">USCDI v6.0 • FHIR R4 Ready</span>
+                  </div>
+                </div>
+              </div>
+              <div class="space-y-2 text-xs">
+                <div class="p-3 rounded-xl bg-blue-50/50 border border-blue-200 space-y-1">
+                  <span class="text-[10px] font-extrabold uppercase tracking-wider text-blue-900">Research Impact:</span>
+                  <p class="text-blue-950 font-medium text-[11px] leading-relaxed">
+                    Qualifies encounter for the National Multi-Center Pneumonia Real-World Evidence (RWE) Observational Cohort.
+                  </p>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-[11px]">
+                  <div class="text-[10px] font-bold text-slate-400 uppercase">Data Completeness Checklist:</div>
+                  <div class="flex items-center gap-2 text-emerald-800 font-semibold">
+                    <span>✓</span><span>Discrete Biomarker Kinetics (WBC, CRP, Procalcitonin)</span>
+                  </div>
+                  <div class="flex items-center gap-2 text-emerald-800 font-semibold">
+                    <span>✓</span><span>Validated Comorbidity ICD-10 Specificity (J44.9 / J45.30)</span>
+                  </div>
+                  <div class="flex items-center gap-2 text-emerald-800 font-semibold">
+                    <span>✓</span><span>Standardized LOINC & SNOMED CT Terminology</span>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <span class="text-slate-600 font-medium">Research Readiness Index:</span>
+                  <span class="font-extrabold text-emerald-800 font-mono text-sm">89% (High Quality)</span>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+              <button onclick="showToast('RWE Cohort Tagged', 'Sarah Al-Otaibi encounter tagged for de-identified RWE research pipeline.', 'success')" class="w-full py-2 px-3 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-soft transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                <span>✓ Tag for RWE Export (De-identified)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOTTOM FOOTER -->
+        <div class="card-hospital p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50 border-slate-200 no-print">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-teal-700 text-white flex items-center justify-center font-bold text-xs shrink-0">🛡️</div>
+            <div>
+              <div class="font-bold text-xs text-slate-900">Decision Support Governance & Protocol Source</div>
+              <div class="text-[11px] text-slate-500">Derived from ATS/IDSA 2024 Community-Acquired Pneumonia Guidelines & Global Antimicrobial Stewardship Protocols.</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 shrink-0">
+            <button onclick="window.print()" class="px-4 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl shadow-soft transition-all cursor-pointer flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+              <span>Export Clinical Justifications (.PDF)</span>
+            </button>
+            <button onclick="navigateTo(6)" class="px-5 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-soft flex items-center gap-2 transition-all cursor-pointer">
+              <span>Step 6: Dual Scores →</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 6: DUAL SCORES -->
+      <!-- ============================================================== -->
+    <!-- STEP 6: DUAL SCORING ENGINE (NO SOURCE TEXT • FULLY REACTIVE)  -->
+    <!-- ============================================================== -->
+    <div id="screen-6" class="w-full max-w-6xl mx-auto space-y-6 fade-in pb-12" style="display: none;">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Dual Scoring Engine</h2>
+          <p class="text-xs text-slate-500 mt-1">Multi-dimensional EHR Data Quality & Research Readiness Evaluation</p>
+        </div>
+        <button 
+          onclick="navigateTo(7)"
+          class="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs rounded-xl shadow-sm transition flex items-center gap-2 cursor-pointer"
+        >
+          <span>Finalize Record</span>
+          <span>&rarr;</span>
+        </button>
+      </div>
+
+      <!-- Dual Grid Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        
+        <!-- LEFT CARD: Documentation Quality Score -->
+        <div class="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm flex flex-col">
+          <div class="bg-[#0B1528] px-6 py-4 flex items-center justify-between">
+            <h3 class="font-bold text-white text-base tracking-wide">Documentation Quality Score</h3>
+            <span id="step6QualityBadge" class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full">92% - Excellent</span>
+          </div>
+          
+          <div class="p-6 space-y-5 flex-1">
+            <!-- Completeness -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs font-semibold text-slate-700">
+                <span>Completeness</span>
+                <span id="step6ValCompleteness" class="text-slate-900 font-bold font-mono">35%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                <div id="step6BarCompleteness" class="bg-[#0B1528] h-full rounded-full transition-all duration-500" style="width: 35%;"></div>
+              </div>
+            </div>
+
+            <!-- Accuracy/Correctness -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs font-semibold text-slate-700">
+                <span>Accuracy/Correctness</span>
+                <span id="step6ValAccuracy" class="text-slate-900 font-bold font-mono">25%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                <div id="step6BarAccuracy" class="bg-[#0B1528] h-full rounded-full transition-all duration-500" style="width: 25%;"></div>
+              </div>
+            </div>
+
+            <!-- Clarity -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs font-semibold text-slate-700">
+                <span>Clarity</span>
+                <span id="step6ValClarity" class="text-slate-900 font-bold font-mono">20%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                <div id="step6BarClarity" class="bg-[#0B1528] h-full rounded-full transition-all duration-500" style="width: 20%;"></div>
+              </div>
+            </div>
+
+            <!-- Organization -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs font-semibold text-slate-700">
+                <span>Organization</span>
+                <span id="step6ValOrg" class="text-slate-900 font-bold font-mono">20%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                <div id="step6BarOrg" class="bg-[#0B1528] h-full rounded-full transition-all duration-500" style="width: 20%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT CARD: Research Readiness Score -->
+        <div class="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm flex flex-col">
+          <div class="bg-[#0E6245] px-6 py-4 flex items-center justify-between">
+            <h3 class="font-bold text-white text-base tracking-wide">Research Readiness Score</h3>
+            <span id="step6ResearchBadge" class="text-xs font-semibold px-2.5 py-1 bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 rounded-full">89% - Very Good</span>
+          </div>
+          
+          <div class="p-6 space-y-5 flex-1">
+            <!-- Data completeness -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs font-semibold text-slate-700">
+                <span>Data completeness</span>
+                <span id="step6ValDataComp" class="text-slate-900 font-bold font-mono">40%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                <div id="step6BarDataComp" class="bg-[#0E6245] h-full rounded-full transition-all duration-500" style="width: 40%;"></div>
+              </div>
+            </div>
+
+            <!-- Conformance -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs font-semibold text-slate-700">
+                <span>Conformance</span>
+                <span id="step6ValConformance" class="text-slate-900 font-bold font-mono">30%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                <div id="step6BarConformance" class="bg-[#0E6245] h-full rounded-full transition-all duration-500" style="width: 30%;"></div>
+              </div>
+            </div>
+
+            <!-- Plausibility -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs font-semibold text-slate-700">
+                <span>Plausibility</span>
+                <span id="step6ValPlausibility" class="text-slate-900 font-bold font-mono">20%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                <div id="step6BarPlausibility" class="bg-[#0E6245] h-full rounded-full transition-all duration-500" style="width: 20%;"></div>
+              </div>
+            </div>
+
+            <!-- Data consistency -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs font-semibold text-slate-700">
+                <span>Data consistency</span>
+                <span id="step6ValConsistency" class="text-slate-900 font-bold font-mono">10%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                <div id="step6BarConsistency" class="bg-[#0E6245] h-full rounded-full transition-all duration-500" style="width: 10%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div id="screen-7" class="space-y-6 max-w-5xl mx-auto fade-in hidden">
+        
+        <!-- TOP BREADCRUMB -->
+        <div class="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto pb-1 no-print">
+          <button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
+          <span>›</span>
+          <button onclick="navigateTo(3)" class="hover:text-teal-700">Step 3: Clinical Document</button>
+          <span>›</span>
+          <button onclick="navigateTo(6)" class="hover:text-teal-700">Step 6: Dual Scores</button>
+          <span>›</span>
+          <span class="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+            Step 7: Finalize Clinical Record (Sign & Save)
+          </span>
+        </div>
+
+        <!-- DYNAMIC CLINICAL OVERRIDE WARNING BANNER (SHOWN WHEN SCORE < 90%) -->
+        <div id="step7OverrideWarningBanner" class="p-4 rounded-xl bg-amber-50 border border-amber-300 flex items-start gap-3 text-xs text-amber-900 fade-in no-print">
+          <div class="text-base shrink-0">⚠️</div>
+          <div class="space-y-0.5">
+            <div class="font-bold text-amber-950">Documentation Completeness Advisory</div>
+            <p class="leading-relaxed">
+              Note: 3 ATS/IDSA recommendations remain unaddressed. Clinician attestation will record override in the audit log.
+            </p>
+          </div>
+        </div>
+
+        <!-- COMPLIANT VERIFIED BANNER (SHOWN WHEN SCORE >= 90%) -->
+        <div id="step7VerifiedBanner" class="p-4 rounded-xl bg-emerald-50 border border-emerald-300 items-start gap-3 text-xs text-emerald-900 fade-in hidden no-print">
+          <div class="text-base shrink-0">✓</div>
+          <div class="space-y-0.5">
+            <div class="font-bold text-emerald-950">ATS/IDSA Quality Benchmark Satisfied (92%)</div>
+            <p class="leading-relaxed">
+              All 11 CAP checklist items, LIS biomarkers, and 7-day stewardship targets verified. Ready for standard EHR signing.
+            </p>
+          </div>
+        </div>
+
+        <!-- HEADER CONTROLS BAR -->
+        <div class="card-hospital p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-xl font-bold text-slate-900">Step 7: Finalize Clinical Record</h2>
+              <span id="finalRecordStatusBadge" class="px-2 py-0.5 rounded text-xs font-bold badge-amber">Draft (Unsigned)</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">
+              Cryptographic SHA-256 provenance stamping and immediate FHIR R4 document bridge synchronization.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button onclick="window.print()" class="px-3 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs rounded-xl shadow-soft cursor-pointer">
+              Print Document
+            </button>
+            <button 
+              onclick="saveFinalRecord()" 
+              id="saveFinalBtn" 
+              class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-soft flex items-center gap-2 transition-all cursor-pointer hover:scale-105 active:scale-95"
+            >
+              <span>Save Final Record in EHR ✓</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- PRINTABLE CLINICAL DOCUMENT -->
+        <div class="card-hospital p-8 space-y-6 print-area">
+          <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+            <div>
+              <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">King Fahd University Medical Center • Inpatient Care</div>
+              <h1 class="text-xl font-extrabold text-slate-900 mt-0.5">CLINICAL PROGRESS NOTE & STEP-DOWN</h1>
+            </div>
+            <div class="text-right text-xs">
+              <div class="font-bold text-slate-900">Patient: Sarah Al-Otaibi</div>
+              <div class="text-slate-500">MRN: 882934 • Attending: Dr. Mohammed</div>
+            </div>
+          </div>
+
+          <div class="space-y-4 text-xs">
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div class="font-bold text-slate-900 uppercase text-[11px] flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-teal-700"></span>
+                <span>Subjective:</span>
+              </div>
+              <div id="finalSubjective" class="text-slate-700 whitespace-pre-wrap leading-relaxed"></div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div class="font-bold text-slate-900 uppercase text-[11px] flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-teal-700"></span>
+                <span>Objective:</span>
+              </div>
+              <div id="finalObjective" class="text-slate-700 whitespace-pre-wrap leading-relaxed font-medium"></div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div class="font-bold text-slate-900 uppercase text-[11px] flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-teal-700"></span>
+                <span>Assessment:</span>
+              </div>
+              <div id="finalAssessment" class="text-slate-700 whitespace-pre-wrap leading-relaxed"></div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+              <div class="font-bold text-slate-900 uppercase text-[11px] flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-teal-700"></span>
+                <span>Plan:</span>
+              </div>
+              <div id="finalPlan" class="text-slate-700 whitespace-pre-wrap leading-relaxed"></div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg" id="provenanceLockIcon">🔒</div>
+              <div>
+                <div class="font-bold text-slate-900 flex items-center gap-2">
+                  <span>Dr. Mohammed, MD • Attending Physician</span>
+                  <span id="provenanceVerifiedTag" class="px-2 py-0.2 rounded bg-slate-100 text-slate-700 text-[10px] font-bold">Unsigned Draft</span>
+                </div>
+                <div class="text-slate-500 font-mono text-[11px]" id="provenanceHashStamp">
+                  Audit Hash: sha256-8f9b2a7d4fcbda879e61209b44c82e71fa01 • 2026-08-27T18:50:00Z
+                </div>
+              </div>
+            </div>
+            <button onclick="openFhirModal()" class="px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 rounded-xl font-bold flex items-center gap-2 shadow-soft transition-all cursor-pointer">
+              <svg class="w-4 h-4 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7c0-2-1-3-3-3H7C5 4 4 5 4 7zm0 5h16"/></svg>
+              <span>View FHIR R4 Bundle</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- FHIR MODAL -->
+  <div id="fhirModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 text-slate-100 rounded-2xl border border-slate-700 shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col fade-in">
+      <div class="p-5 px-6 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-teal-500/20 border border-teal-500/40 text-teal-400 flex items-center justify-center font-bold text-xs">
+            FHIR
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-white">HL7 FHIR R4 Clinical Document Bundle</h3>
+            <p class="text-[11px] text-slate-400">Sarah Al-Otaibi (MRN: 882934) • USCDI v6.0 Document Profile</p>
+          </div>
+        </div>
+        <button onclick="closeModal('fhirModal')" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
+      </div>
+
+      <div class="p-6 overflow-y-auto flex-1 bg-slate-950/80">
+        <pre class="p-4 rounded-xl bg-slate-900 text-teal-300 font-mono text-[11px] overflow-x-auto leading-relaxed border border-slate-800" id="fhirPreBlock"></pre>
+      </div>
+
+      <div class="p-4 px-6 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 bg-slate-900">
+        <div class="flex items-center gap-2">
+          <button onclick="copyFhirJson()" id="btnCopyFhir" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <span id="copyBtnText">Copy JSON</span>
+          </button>
+          
+          <button onclick="downloadFhir()" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-soft transition-all cursor-pointer">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span>Download FHIR Bundle (.json)</span>
+          </button>
+        </div>
+
+        <button onclick="closeModal('fhirModal')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DYNAMIC CLINICAL-ONLY AUDIT TRAIL MODAL -->
+  <div id="auditModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col fade-in">
+      <div class="p-5 px-6 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 flex items-center justify-center font-bold text-base shadow-soft">
+            <svg class="w-5 h-5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-extrabold text-base text-slate-900">Audit Trail & Cryptographic Provenance Log</h3>
+              <span id="auditEventCounter" class="px-2 py-0.5 rounded text-[10px] font-bold badge-teal">2 Clinical Events</span>
+            </div>
+            <p class="text-[11px] text-slate-500">Immutable clinical data modification ledger for <strong>Sarah Al-Otaibi (MRN: 882934)</strong> (Excludes navigation)</p>
+          </div>
+        </div>
+        <button onclick="closeModal('auditModal')" class="text-slate-400 hover:text-slate-700 text-lg font-bold">✕</button>
+      </div>
+
+      <div class="p-6 overflow-y-auto flex-1 space-y-3 bg-slate-50/50" id="auditLogsContainer"></div>
+
+      <div class="p-4 px-6 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-white">
+        <div class="flex items-center gap-2">
+          <button onclick="downloadAuditLogJson()" class="px-4 py-2 bg-slate-100 hover:bg-teal-50 hover:text-teal-900 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-soft transition-all cursor-pointer">
+            <svg class="w-3.5 h-3.5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span>Download Raw Audit Log (.JSON)</span>
+          </button>
+          <button onclick="clearTransientLogs()" class="px-3 py-2 text-slate-400 hover:text-rose-600 text-xs font-semibold">
+            Reset Log
+          </button>
+        </div>
+
+        <button onclick="closeModal('auditModal')" class="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold shadow-soft cursor-pointer">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm no-print"></div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+
+    // ==============================================================
+    // BULLETPROOF ROUTER & STATE SYNCHRONIZATION ENGINE
+    // ==============================================================
+    window.appScoreState = {
+      quality: 68,
+      research: 72,
+      labAccepted: false,
+      acoAccepted: false,
+      stewardshipAccepted: false
+    };
+
+    window.setStep = function(step) {
+      window.navigateTo(step);
+    };
+    window.setActiveTab = window.setStep;
+
+    window.navigateTo = function(step) {
+      const target = Math.min(Math.max(Number(step) || 1, 1), 7);
+      currentStep = target;
+
+      for (let s = 1; s <= 7; s++) {
+        const screenEl = document.getElementById('screen-' + s);
+        if (screenEl) {
+          if (s === target) {
+            screenEl.style.display = 'block';
+            screenEl.classList.remove('hidden');
+          } else {
+            screenEl.style.display = 'none';
+            screenEl.classList.add('hidden');
+          }
+        }
+
+        const sideBtn = document.getElementById('stepBtn-' + s);
+        if (sideBtn) {
+          const isActive = (s === target);
+          sideBtn.className = isActive
+            ? 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-soft'
+            : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
+        }
+      }
+
+      if (target === 6) {
+        window.updateGlobalScores();
+      }
+
+      if (target === 7 && typeof updateFinalRecordDisplay === 'function') {
+        updateFinalRecordDisplay();
+      }
+
+      const mainEl = document.querySelector('main');
+      if (mainEl) mainEl.scrollTop = 0;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    function navigateTo(step) {
+      window.navigateTo(step);
+    }
+
+    window.updateGlobalScores = function() {
+      let q = 68;
+      let r = 72;
+      
+      let comp = 29;
+      let acc = 13;
+      let clar = 12;
+      let org = 14;
+
+      let dComp = 24;
+      let conf = 22;
+      let plaus = 16;
+      let cons = 10;
+
+      if (window.appScoreState.labAccepted) {
+        q += 10;
+        r += 8;
+        comp += 3;
+        acc += 5;
+        dComp += 8;
+        conf += 4;
+      }
+      if (window.appScoreState.acoAccepted) {
+        q += 8;
+        r += 5;
+        acc += 7;
+        clar += 4;
+        conf += 4;
+        plaus += 2;
+      }
+      if (window.appScoreState.stewardshipAccepted) {
+        q += 6;
+        r += 4;
+        comp += 3;
+        clar += 4;
+        org += 6;
+        dComp += 8;
+        plaus += 2;
+      }
+
+      q = Math.min(q, 96);
+      r = Math.min(r, 92);
+      comp = Math.min(comp, 35);
+      acc = Math.min(acc, 25);
+      clar = Math.min(clar, 20);
+      org = Math.min(org, 20);
+
+      dComp = Math.min(dComp, 40);
+      conf = Math.min(conf, 30);
+      plaus = Math.min(plaus, 20);
+
+      window.appScoreState.quality = q;
+      window.appScoreState.research = r;
+
+      const sCardQ = document.getElementById('sarahCardQualityScore');
+      if (sCardQ) sCardQ.innerText = q + '%';
+      const sCardR = document.getElementById('sarahCardResearchScore');
+      if (sCardR) sCardR.innerText = r + '%';
+
+      if (typeof updateQualityGauge === 'function') {
+        updateQualityGauge(q);
+      }
+
+      const qBadge = document.getElementById('step6QualityBadge');
+      if (qBadge) {
+        qBadge.innerText = q >= 90 ? `${q}% - Excellent` : q >= 75 ? `${q}% - In Review` : `${q}% - Deficient`;
+      }
+
+      const valComp = document.getElementById('step6ValCompleteness');
+      if (valComp) valComp.innerText = comp + '%';
+      const barComp = document.getElementById('step6BarCompleteness');
+      if (barComp) barComp.style.width = comp + '%';
+
+      const valAcc = document.getElementById('step6ValAccuracy');
+      if (valAcc) valAcc.innerText = acc + '%';
+      const barAcc = document.getElementById('step6BarAccuracy');
+      if (barAcc) barAcc.style.width = acc + '%';
+
+      const valClar = document.getElementById('step6ValClarity');
+      if (valClar) valClar.innerText = clar + '%';
+      const barClar = document.getElementById('step6BarClarity');
+      if (barClar) barClar.style.width = clar + '%';
+
+      const valOrg = document.getElementById('step6ValOrg');
+      if (valOrg) valOrg.innerText = org + '%';
+      const barOrg = document.getElementById('step6BarOrg');
+      if (barOrg) barOrg.style.width = org + '%';
+
+      const rBadge = document.getElementById('step6ResearchBadge');
+      if (rBadge) {
+        rBadge.innerText = r >= 85 ? `${r}% - Very Good` : `${r}% - Moderate`;
+      }
+
+      const valDComp = document.getElementById('step6ValDataComp');
+      if (valDComp) valDComp.innerText = dComp + '%';
+      const barDComp = document.getElementById('step6BarDataComp');
+      if (barDComp) barDComp.style.width = dComp + '%';
+
+      const valConf = document.getElementById('step6ValConformance');
+      if (valConf) valConf.innerText = conf + '%';
+      const barConf = document.getElementById('step6BarConformance');
+      if (barConf) barConf.style.width = conf + '%';
+
+      const valPlaus = document.getElementById('step6ValPlausibility');
+      if (valPlaus) valPlaus.innerText = plaus + '%';
+      const barPlaus = document.getElementById('step6BarPlausibility');
+      if (barPlaus) barPlaus.style.width = plaus + '%';
+
+      const valCons = document.getElementById('step6ValConsistency');
+      if (valCons) valCons.innerText = cons + '%';
+      const barCons = document.getElementById('step6BarConsistency');
+      if (barCons) barCons.style.width = cons + '%';
+    };
+
+    function evaluateClinicalNote(note) {
       const checklist = {
         demographics: Boolean(note.patientId && note.age),
         chiefComplaint: Boolean(note.chiefComplaint && note.chiefComplaint.length > 5),
@@ -587,12 +2182,28 @@ function evaluateClinicalNote(note) {
       showToast('FHIR Downloaded', 'fhir_r4_sarah_alotaibi.json downloaded to your device.', 'success');
     }
 
-    window.setStep = function(step) {
-      window.navigateTo(step);
-    };
-    window.setActiveTab = window.setStep;
+    function navigateTo(step) {
+      currentStep = step;
+      for (let s = 1; s <= 7; s++) {
+        const screenEl = document.getElementById('screen-' + s);
+        if (screenEl) {
+          screenEl.classList.toggle('hidden', s !== step);
+        }
+        const btnEl = document.getElementById('stepBtn-' + s);
+        if (btnEl) {
+          const isActive = (s === step);
+          btnEl.className = isActive
+            ? 'w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-soft'
+            : 'w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
+        }
+      }
 
-    
+      if (step === 7) {
+        updateFinalRecordDisplay();
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
     function filterQueue(dept) {
       ['All', 'Internal Medicine', 'Cardiology', 'Surgery'].forEach(d => {
@@ -622,95 +2233,171 @@ function evaluateClinicalNote(note) {
     }
 
     function acceptLabIngestion() {
-      const assessmentEl = document.getElementById('assessmentPlanInput');
-      if (assessmentEl && !assessmentEl.value.includes('Leukocytosis')) {
-        assessmentEl.value = assessmentEl.value + "
+      isLabAccepted = true;
+      const objEl = document.getElementById('objectiveTextarea');
+      const labSnippet = "\\n\\n[Cerner LIS Biomarkers Aug 18]: WBC 8.2 x10^9/L (from 14.1), CRP 6.5 mg/L (from 45.0), Procalcitonin 0.11 ng/mL.";
+      if (!objEl.value.includes('WBC 8.2')) {
+        objEl.value += labSnippet;
+      }
+      objEl.classList.add('highlight-insert');
+      setTimeout(() => objEl.classList.remove('highlight-insert'), 1800);
 
-[LIS INGESTED: WBC 14.8k, CRP 84 mg/L, Lactate 1.8 mmol/L, S. pneumoniae (Urine Ag +)]";
+      const beforeBadge = document.getElementById('objBeforeBadge');
+      if (beforeBadge) beforeBadge.classList.add('hidden');
+      const afterBadge = document.getElementById('objAfterBadge');
+      if (afterBadge) {
+        afterBadge.classList.remove('hidden');
+        afterBadge.classList.add('flex');
       }
-      window.appScoreState.labAccepted = true;
-      window.updateGlobalScores();
-      appendClinicalAuditLog('LIS_LAB_INGESTION', 'Automated LOINC Laboratory biomarkers injected into SOAP draft (+10% Quality).', 'Dr. Mohammed (Attending)');
-      showToast('LIS Labs Ingested (+10% Documentation Quality)', 'success');
-      const btn = document.getElementById('labIngestBtn');
-      if (btn) {
-        btn.innerHTML = '✓ Ingested';
-        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
-      }
+
+      document.getElementById('objectiveStatusBadge').innerText = 'LOINC MAPPED';
+      document.getElementById('objectiveStatusBadge').className = 'text-[10px] font-bold badge-emerald px-2 py-0.5 rounded';
+      document.getElementById('objKineticsText').innerText = 'Biomarker Kinetics Documented';
+      document.getElementById('objKineticsText').className = 'text-emerald-700 font-semibold';
+
+      appendClinicalAuditLog(
+        'EHR Ingest',
+        'LIS Biomarker Ingestion',
+        'LOINC / Cerner LIS',
+        'Ingested LOINC-mapped labs (WBC 8.2 x10^9/L, CRP 6.5 mg/L, Procalcitonin 0.11 ng/mL).'
+      );
+
+      handleDoctorInput();
+      showToast('Cerner LIS Injected (+10%)', 'WBC 8.2 & CRP 6.5 added to Objective. Score raised to 78%!', 'success');
     }
 
     function acceptAcoSpecificity() {
-      const assessmentEl = document.getElementById('assessmentPlanInput');
-      if (assessmentEl && !assessmentEl.value.includes('J13')) {
-        assessmentEl.value = assessmentEl.value + "
-[ACO SPECIFICITY: J13 - Pneumonia due to Streptococcus pneumoniae]";
+      isAcoAccepted = true;
+      const assessEl = document.getElementById('assessmentTextarea');
+      assessEl.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\\n2. Asthma-COPD Overlap (ACO) - ICD-10 J44.9 / J45.30.\\n3. Essential Hypertension - Blood pressure controlled.`;
+      assessEl.classList.add('highlight-insert');
+      setTimeout(() => assessEl.classList.remove('highlight-insert'), 1800);
+
+      const beforeBadge = document.getElementById('assessBeforeBadge');
+      if (beforeBadge) beforeBadge.classList.add('hidden');
+      const afterBadge = document.getElementById('assessAfterBadge');
+      if (afterBadge) {
+        afterBadge.classList.remove('hidden');
+        afterBadge.classList.add('flex');
       }
-      window.appScoreState.acoAccepted = true;
-      window.updateGlobalScores();
-      appendClinicalAuditLog('DIAGNOSTIC_REFINEMENT', 'Diagnostic specificity upgraded to ICD-10 J13 (+8% Quality).', 'Dr. Mohammed (Attending)');
-      showToast('Diagnostic Specificity Applied (+8% Quality)', 'success');
-      const btn = document.getElementById('acoBtn');
-      if (btn) {
-        btn.innerHTML = '✓ Refined';
-        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
-      }
+
+      document.getElementById('assessmentStatusBadge').innerText = 'ACO SPECIFIED (J44.9/J45.30)';
+      document.getElementById('assessmentStatusBadge').className = 'text-[10px] font-bold badge-emerald px-2 py-0.5 rounded';
+      document.getElementById('assessIcdText').innerText = 'ICD-10 Specificity Mapped';
+      document.getElementById('assessIcdText').className = 'text-emerald-700 font-semibold';
+
+      appendClinicalAuditLog(
+        'Diagnostic Refinement',
+        'Comorbidity Coding Specificity',
+        'Dr. Mohammed',
+        'Upgraded comorbidity to Asthma-COPD Overlap (ACO) ICD-10 J44.9/J45.30.'
+      );
+
+      handleDoctorInput();
+      showToast('ACO Specificity Added (+8%)', 'Assessment upgraded with J44.9 code. Score raised to 86%!', 'success');
     }
 
     function acceptStewardshipPlan() {
-      const assessmentEl = document.getElementById('assessmentPlanInput');
-      if (assessmentEl && !assessmentEl.value.includes('7-Day Plan')) {
-        assessmentEl.value = assessmentEl.value + "
-[STEWARDSHIP: Ceftriaxone 1g IV Q24H x 3d -> Oral Cefpodoxime 200mg BID (7-Day Total Course)]";
+      isPlanAccepted = true;
+      const planEl = document.getElementById('planTextarea');
+      planEl.value = `- Step-down to Oral Amox/Clav 875/125mg PO BID to complete 7-day course.\\n- Discontinue supplemental oxygen; patient stable at 98% room air.\\n- Resume home Losartan 50mg daily and Ipratropium/Albuterol MDI.\\n- Discharge planning for tomorrow with outpatient pulmonary clinic follow-up in 7 days.`;
+      planEl.classList.add('highlight-insert');
+      setTimeout(() => planEl.classList.remove('highlight-insert'), 1800);
+
+      const beforeBadge = document.getElementById('planBeforeBadge');
+      if (beforeBadge) beforeBadge.classList.add('hidden');
+      const afterBadge = document.getElementById('planAfterBadge');
+      if (afterBadge) {
+        afterBadge.classList.remove('hidden');
+        afterBadge.classList.add('flex');
       }
-      window.appScoreState.stewardshipAccepted = true;
-      window.updateGlobalScores();
-      appendClinicalAuditLog('STEWARDSHIP_PLAN', 'Evidence-based 7-day antibiotic stewardship de-escalation protocol accepted (+6% Quality).', 'Dr. Mohammed (Attending)');
-      showToast('7-Day Stewardship Plan Applied (+6% Quality)', 'success');
-      const btn = document.getElementById('stewardshipBtn');
-      if (btn) {
-        btn.innerHTML = '✓ Plan Accepted';
-        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300';
-      }
+
+      document.getElementById('planStatusBadge').innerText = 'ATS/IDSA COMPLIANT';
+      document.getElementById('planStatusBadge').className = 'text-[10px] font-bold badge-emerald px-2 py-0.5 rounded';
+      document.getElementById('planDurationText').innerText = '7-Day Target Verified';
+      document.getElementById('planDurationText').className = 'text-emerald-700 font-semibold';
+
+      appendClinicalAuditLog(
+        'Clinical Guideline Action',
+        'Antimicrobial Stewardship Acceptance',
+        'Dr. Mohammed',
+        'Applied ATS/IDSA 7-day oral step-down regimen (Amoxicillin/Clavulanate 875/125mg PO BID).'
+      );
+
+      handleDoctorInput();
+      showToast('7-Day Plan Applied (+6%)', 'Stewardship step-down protocol applied. Score reached 92% (Compliant)!', 'success');
     }
 
     function resetToRawDraft() {
-      window.appScoreState = {
-        quality: 68,
-        research: 72,
-        labAccepted: false,
-        acoAccepted: false,
-        stewardshipAccepted: false
-      };
-      window.updateGlobalScores();
-      const assessmentEl = document.getElementById('assessmentPlanInput');
-      if (assessmentEl) {
-        assessmentEl.value = "Assessment: Community-Acquired Pneumonia.
-Plan: IV Ceftriaxone + Azithromycin, supplemental O2, monitoring.";
+      isLabAccepted = false;
+      isAcoAccepted = false;
+      isPlanAccepted = false;
+      isRecordSigned = false;
+
+      document.getElementById('subjectiveTextarea').value = `71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.`;
+      document.getElementById('objectiveTextarea').value = `Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\\nPhysical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.`;
+      document.getElementById('assessmentTextarea').value = `1. Community-Acquired Pneumonia (CAP) - Improving.\\n2. Mild Asthma - Stable.\\n3. Hypertension - Controlled.`;
+      document.getElementById('planTextarea').value = `- Continue IV antibiotics and supportive respiratory care.\\n- Monitor vitals.\\n- Plan discharge when clinically ready.`;
+
+      const objBefore = document.getElementById('objBeforeBadge');
+      if (objBefore) { objBefore.classList.remove('hidden'); objBefore.classList.add('flex'); }
+      const objAfter = document.getElementById('objAfterBadge');
+      if (objAfter) { objAfter.classList.add('hidden'); objAfter.classList.remove('flex'); }
+
+      const assessBefore = document.getElementById('assessBeforeBadge');
+      if (assessBefore) { assessBefore.classList.remove('hidden'); assessBefore.classList.add('flex'); }
+      const assessAfter = document.getElementById('assessAfterBadge');
+      if (assessAfter) { assessAfter.classList.add('hidden'); assessAfter.classList.remove('flex'); }
+
+      const planBefore = document.getElementById('planBeforeBadge');
+      if (planBefore) { planBefore.classList.remove('hidden'); planBefore.classList.add('flex'); }
+      const planAfter = document.getElementById('planAfterBadge');
+      if (planAfter) { planAfter.classList.add('hidden'); planAfter.classList.remove('flex'); }
+
+      document.getElementById('objectiveStatusBadge').innerText = 'LIS Biomarkers Pending';
+      document.getElementById('objectiveStatusBadge').className = 'text-[10px] font-bold badge-amber px-2 py-0.5 rounded';
+      document.getElementById('objKineticsText').innerText = 'Click [+ Insert] to raise score to 78%';
+      document.getElementById('objKineticsText').className = 'text-amber-700 font-semibold';
+
+      document.getElementById('assessmentStatusBadge').innerText = 'ACO Specificity Needed';
+      document.getElementById('assessmentStatusBadge').className = 'text-[10px] font-bold badge-amber px-2 py-0.5 rounded';
+      document.getElementById('assessIcdText').innerText = 'Click [+ Clarify] to raise score to 86%';
+      document.getElementById('assessIcdText').className = 'text-teal-700 font-semibold';
+
+      document.getElementById('planStatusBadge').innerText = 'Duration Vague';
+      document.getElementById('planStatusBadge').className = 'text-[10px] font-bold badge-amber px-2 py-0.5 rounded';
+      document.getElementById('planDurationText').innerText = 'Click [+ Apply] to reach 92% (Compliant)';
+      document.getElementById('planDurationText').className = 'text-amber-700 font-semibold';
+
+      // Reset Step 7 UI
+      const saveBtn = document.getElementById('saveFinalBtn');
+      if (saveBtn) {
+        saveBtn.innerHTML = '<span>Save Final Record in EHR ✓</span>';
+        saveBtn.className = 'px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-soft flex items-center gap-2 transition-all cursor-pointer hover:scale-105 active:scale-95';
       }
-      showToast('Reset to Raw Physician Draft (68% Quality)', 'info');
+      const badge = document.getElementById('finalRecordStatusBadge');
+      if (badge) {
+        badge.innerText = 'Draft (Unsigned)';
+        badge.className = 'px-2 py-0.5 rounded text-xs font-bold badge-amber';
+      }
+      const provTag = document.getElementById('provenanceVerifiedTag');
+      if (provTag) {
+        provTag.innerText = 'Unsigned Draft';
+        provTag.className = 'px-2 py-0.2 rounded bg-slate-100 text-slate-700 text-[10px] font-bold';
+      }
+
+      handleDoctorInput();
+      showToast('Reset to Raw Draft (68%)', 'Baseline un-optimized draft loaded.', 'info');
     }
 
     function quickFillOptimalNote() {
-      window.appScoreState = {
-        quality: 92,
-        research: 89,
-        labAccepted: true,
-        acoAccepted: true,
-        stewardshipAccepted: true
-      };
-      window.updateGlobalScores();
-      const assessmentEl = document.getElementById('assessmentPlanInput');
-      if (assessmentEl) {
-        assessmentEl.value = "Assessment: Severe Community-Acquired Pneumonia due to Streptococcus pneumoniae (ICD-10 J13) in a 71-year-old female with Asthma/COPD overlap (ACO).
-
-Plan:
-1. Ingested LOINC Labs: WBC 14.8k, CRP 84 mg/L, Lactate 1.8 mmol/L, Urine Ag (+).
-2. Antimicrobial Stewardship: Ceftriaxone 1g IV Q24H x 3d, then switch to Oral Cefpodoxime 200mg BID for 4 days (Total 7-day course).
-3. Respiratory: Maintain SpO2 92-94%, monitor serial vitals.";
-      }
-      appendClinicalAuditLog('OPTIMAL_NOTE_GENERATION', 'Applied hospital optimal documentation protocol (92% Quality / 89% Research Readiness).', 'Dr. Mohammed (Attending)');
-      showToast('Optimal Clinical Protocol Applied (92% Quality / 89% Research Readiness)', 'success');
+      acceptLabIngestion();
+      acceptAcoSpecificity();
+      acceptStewardshipPlan();
+      showToast('Quick-Fill Applied', 'All 3 AI optimizations accepted. Score elevated to 92%!', 'success');
     }
+
+    let typingDebounceTimer = null;
 
     function handleDoctorInput(sectionChanged) {
       if (sectionChanged) {
@@ -1096,6 +2783,6 @@ Plan:
       renderAuditLogs();
       resetToRawDraft();
     });
-</script>
+  </script>
 </body>
 </html>
