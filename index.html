@@ -1079,60 +1079,250 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       </div>
 
       <!-- STEP 6: DUAL SCORES -->
-      <div id="screen-6" class="space-y-6 max-w-5xl mx-auto fade-in hidden">
-        <div class="card-hospital p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 class="text-xl font-bold text-slate-900">Step 6: Dual Scoring Engine</h2>
-            <p class="text-xs text-slate-500 mt-1">Exact PRD Mathematical Formula Computation dynamically bound to Step 3 state.</p>
+      <!-- ============================================================== -->
+    <!-- STEP 6: DUAL SCORING ENGINE (QUALITY & RESEARCH READINESS)     -->
+    <!-- ============================================================== -->
+    <div id="screen-6" class="space-y-6 max-w-5xl mx-auto fade-in" style="display: none;">
+      
+      <!-- Screen Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold badge-teal">DUAL SCORING ENGINE</span>
+            <span class="text-xs text-slate-500 font-medium">SOAP Documentation vs. Secondary Research Suitability</span>
           </div>
-          <button onclick="navigateTo(7)" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-soft">
-            Step 7: Finalize Record →
+          <h2 class="text-xl font-bold text-slate-900 tracking-tight mt-1">Dual-Engine Clinical & Research Analytics</h2>
+          <p class="text-xs text-slate-500">Multidimensional algorithmic assessment comparing direct care compliance against secondary research readiness.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="navigateTo(5)" class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-all">
+            ← Recommendations
+          </button>
+          <button onclick="navigateTo(7)" class="px-4 py-2 rounded-xl text-xs font-bold bg-teal-700 hover:bg-teal-800 text-white shadow-soft transition-all flex items-center gap-2">
+            <span>Proceed to Finalize Record</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
           </button>
         </div>
+      </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="card-hospital p-6 space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-200 pb-3">
-              <span class="font-bold text-sm text-slate-900">Documentation Quality Score</span>
-              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold transition-all" id="dualScoreQualBadge">68% - Action Required</span>
-            </div>
-            <div class="flex items-center gap-5 bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <div class="w-20 h-20 rounded-full bg-teal-50 border-8 border-amber-500 flex flex-col items-center justify-center shrink-0 transition-all duration-500" id="dualQualCircle">
-                <span class="text-2xl font-extrabold text-amber-800 transition-all" id="dualQualScoreNum">68%</span>
-              </div>
-              <div class="text-xs space-y-1">
-                <div class="font-bold text-slate-900">PRD Formula (40%, 20%, 20%, 20%):</div>
-                <div class="font-mono text-[11px] text-teal-900 bg-white p-2 rounded border border-teal-200" id="dualQualFormulaText">
-                  29.09 + 13.00 + 12.00 + 20.00 = <strong>74.09 → 68%</strong>
-                </div>
-              </div>
-            </div>
+      <!-- Top Summary Formula Callout -->
+      <div class="bg-gradient-to-r from-slate-900 to-teal-950 text-white rounded-2xl p-5 shadow-soft-lg flex flex-col md:flex-row items-center justify-between gap-6 border border-slate-800">
+        <div class="space-y-1 text-left">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/20 text-teal-300 border border-teal-500/30">MATHEMATICAL FORMULATION</span>
+            <span class="text-xs text-slate-400">Deterministic Weighted Synthesis</span>
           </div>
-
-          <div class="card-hospital p-6 space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-200 pb-3">
-              <span class="font-bold text-sm text-slate-900">Research Readiness Score</span>
-              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold transition-all" id="dualScoreResBadge">72% - Needs Enrichment</span>
-            </div>
-            <div class="flex items-center gap-5 bg-slate-50 p-4 rounded-xl border border-slate-200">
-              <div class="w-20 h-20 rounded-full bg-emerald-50 border-8 border-amber-500 flex flex-col items-center justify-center shrink-0 transition-all duration-500" id="dualResCircle">
-                <span class="text-2xl font-extrabold text-amber-800 transition-all" id="dualResScoreNum">72%</span>
-              </div>
-              <div class="text-xs space-y-1">
-                <div class="font-bold text-slate-900">PRD Research Formula (40%, 30%, 20%, 10%):</div>
-                <div class="font-mono text-[11px] text-emerald-900 bg-white p-2 rounded border border-emerald-200" id="dualResFormulaText">
-                  24.00 + 21.82 + 16.00 + 10.00 = <strong>71.82 → 72%</strong>
-                </div>
-              </div>
-            </div>
+          <h3 class="text-base font-bold text-white">Multidimensional Clinical Quality & Research Concordance</h3>
+          <p class="text-xs text-slate-300 max-w-2xl leading-relaxed">
+            Clinical Documentation Quality reflects adherence to hospital care protocols and clinical completeness, while Research Readiness quantifies secondary usability for observational studies, clinical registries, and observational health data analytics.
+          </p>
+        </div>
+        <div class="flex items-center gap-6 shrink-0 bg-white/5 border border-white/10 p-3.5 rounded-xl">
+          <div class="text-center">
+            <div class="text-2xl font-black text-emerald-400" id="step6HeaderQualScore">92%</div>
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Quality Index</div>
+          </div>
+          <div class="w-px h-8 bg-white/20"></div>
+          <div class="text-center">
+            <div class="text-2xl font-black text-teal-300" id="step6HeaderResScore">89%</div>
+            <div class="text-[10px] text-slate-400 uppercase font-semibold">Research Index</div>
           </div>
         </div>
       </div>
 
-      <!-- ============================================================== -->
-      <!-- STEP 7: FINALIZE RECORD (UNRESTRICTED CLINICIAN OVERRIDE FLOW) -->
-      <!-- ============================================================== -->
-      <div id="screen-7" class="space-y-6 max-w-5xl mx-auto fade-in hidden">
+      <!-- Dual Cards Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- LEFT CARD: Documentation Quality Score -->
+        <div class="card-hospital p-6 space-y-6 flex flex-col justify-between border-t-4 border-t-slate-900 shadow-soft">
+          <div class="space-y-4">
+            <!-- Card Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-bold text-sm shadow-soft">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <div>
+                  <h3 class="font-bold text-base text-slate-900 leading-tight">Documentation Quality Score</h3>
+                  <p class="text-xs text-slate-500">Inpatient Clinical SOAP Note Evaluation</p>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-900 text-white">92% COMPLIANT</span>
+            </div>
+
+            <!-- Big Gauge / Number Box -->
+            <div class="bg-slate-50 rounded-xl p-4 flex items-center justify-between border border-slate-200/80">
+              <div>
+                <div class="text-3xl font-black text-slate-900" id="step6DocQualValue">92%</div>
+                <div class="text-xs font-semibold text-slate-600 mt-0.5">High Clinical Integrity</div>
+              </div>
+              <div class="text-right">
+                <span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">OPTIMAL</span>
+                <div class="text-[10px] text-slate-400 mt-1">CAP Protocol Adherent</div>
+              </div>
+            </div>
+
+            <!-- Dimensions & Progress Bars -->
+            <div class="space-y-3.5 pt-1">
+              <div class="text-xs font-bold text-slate-700 uppercase tracking-wider">Quality Criteria Breakdown:</div>
+              
+              <!-- 1. Completeness: 35% -->
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-semibold text-slate-800">Completeness</span>
+                  <span class="font-bold text-slate-900 font-mono">35%</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-1">
+                  <div class="h-full bg-slate-900 rounded-full transition-all duration-700 ease-out" style="width: 35%;"></div>
+                </div>
+              </div>
+
+              <!-- 2. Accuracy/Correctness: 25% -->
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-semibold text-slate-800">Accuracy/Correctness</span>
+                  <span class="font-bold text-slate-900 font-mono">25%</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-1">
+                  <div class="h-full bg-slate-900 rounded-full transition-all duration-700 ease-out" style="width: 25%;"></div>
+                </div>
+              </div>
+
+              <!-- 3. Clarity: 20% -->
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-semibold text-slate-800">Clarity</span>
+                  <span class="font-bold text-slate-900 font-mono">20%</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-1">
+                  <div class="h-full bg-slate-900 rounded-full transition-all duration-700 ease-out" style="width: 20%;"></div>
+                </div>
+              </div>
+
+              <!-- 4. Organization: 20% -->
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-semibold text-slate-800">Organization</span>
+                  <span class="font-bold text-slate-900 font-mono">20%</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-1">
+                  <div class="h-full bg-slate-900 rounded-full transition-all duration-700 ease-out" style="width: 20%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Academic Source Footer -->
+          <div class="pt-3 border-t border-slate-100 mt-4">
+            <p class="text-[11px] text-slate-500 italic leading-snug">
+              Source: Framework informed by PDQI-9 documentation quality dimensions
+            </p>
+          </div>
+        </div>
+
+        <!-- RIGHT CARD: Research Readiness Score -->
+        <div class="card-hospital p-6 space-y-6 flex flex-col justify-between border-t-4 border-t-emerald-700 shadow-soft">
+          <div class="space-y-4">
+            <!-- Card Header -->
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-bold text-sm shadow-soft">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                </div>
+                <div>
+                  <h3 class="font-bold text-base text-slate-900 leading-tight">Research Readiness Score</h3>
+                  <p class="text-xs text-slate-500">Secondary Usability & Clinical Registry Fit</p>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-700 text-white">89% READY</span>
+            </div>
+
+            <!-- Big Gauge / Number Box -->
+            <div class="bg-emerald-50/50 rounded-xl p-4 flex items-center justify-between border border-emerald-200/80">
+              <div>
+                <div class="text-3xl font-black text-emerald-800" id="step6ResReadValue">89%</div>
+                <div class="text-xs font-semibold text-emerald-700 mt-0.5">High Secondary Fit</div>
+              </div>
+              <div class="text-right">
+                <span class="text-[11px] font-bold text-teal-800 bg-white px-2 py-0.5 rounded border border-teal-200 shadow-2xs">RWE READY</span>
+                <div class="text-[10px] text-slate-500 mt-1">OMOP / FHIR Conformant</div>
+              </div>
+            </div>
+
+            <!-- Dimensions & Progress Bars -->
+            <div class="space-y-3.5 pt-1">
+              <div class="text-xs font-bold text-slate-700 uppercase tracking-wider">Research Dimensions Breakdown:</div>
+              
+              <!-- 1. Data completeness: 40% -->
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-semibold text-slate-800">Data completeness</span>
+                  <span class="font-bold text-emerald-800 font-mono">40%</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-1">
+                  <div class="h-full bg-emerald-700 rounded-full transition-all duration-700 ease-out" style="width: 40%;"></div>
+                </div>
+              </div>
+
+              <!-- 2. Conformance: 30% -->
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-semibold text-slate-800">Conformance</span>
+                  <span class="font-bold text-emerald-800 font-mono">30%</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-1">
+                  <div class="h-full bg-emerald-700 rounded-full transition-all duration-700 ease-out" style="width: 30%;"></div>
+                </div>
+              </div>
+
+              <!-- 3. Plausibility: 20% -->
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-semibold text-slate-800">Plausibility</span>
+                  <span class="font-bold text-emerald-800 font-mono">20%</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-1">
+                  <div class="h-full bg-emerald-700 rounded-full transition-all duration-700 ease-out" style="width: 20%;"></div>
+                </div>
+              </div>
+
+              <!-- 4. Data consistency: 10% -->
+              <div class="space-y-1">
+                <div class="flex justify-between items-center text-xs">
+                  <span class="font-semibold text-slate-800">Data consistency</span>
+                  <span class="font-bold text-emerald-800 font-mono">10%</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-1">
+                  <div class="h-full bg-emerald-700 rounded-full transition-all duration-700 ease-out" style="width: 10%;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Academic Source Footer -->
+          <div class="pt-3 border-t border-slate-100 mt-4">
+            <p class="text-[11px] text-slate-500 italic leading-snug">
+              Source: Weiskopf & Weng data quality framework for EHR research use; Source: Kahn et al. (2016) harmonized data quality framework
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Footer Navigation -->
+      <div class="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl shadow-soft">
+        <button onclick="navigateTo(5)" class="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all">
+          ← Back to AI Recommendations
+        </button>
+        <button onclick="navigateTo(7)" class="px-5 py-2.5 text-xs font-bold text-white bg-teal-700 hover:bg-teal-800 rounded-xl shadow-soft transition-all flex items-center gap-2">
+          <span>Proceed to Finalize Record & Provenance</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </button>
+      </div>
+
+    </div>
+
+    <div id="screen-7" class="space-y-6 max-w-5xl mx-auto fade-in hidden">
         
         <!-- TOP BREADCRUMB -->
         <div class="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto pb-1 no-print">
