@@ -10,6 +10,239 @@
   <script>
 
     // ==============================================================
+    // STEP 4 CHECKLIST RENDERING & LIVE RECALCULATION
+    // ==============================================================
+    window.renderStep4Checklist = function() {
+      const grid = document.getElementById('checklistDetailedList');
+      if (!grid) return;
+
+      const labsOk = !!window.docPatchState.appliedLabs;
+      const acoOk = !!window.docPatchState.appliedAco;
+      const planOk = !!window.docPatchState.appliedPlan;
+
+      const items = [
+        { label: '1. Patient Demographics & Age', ok: true, desc: 'Sarah Al-Otaibi, 71y, Female (MRN 882934) verified with EHR Registry.' },
+        { label: '2. Chief Complaint', ok: true, desc: 'Documented fever, productive cough, and pleuritic chest pain.' },
+        { label: '3. History of Present Illness (HPI)', ok: true, desc: 'Day 3 interval symptom review & resolution trajectory noted.' },
+        { label: '4. Review of Systems (ROS)', ok: true, desc: 'Negative for acute chills; afebrile x 24 hours confirmed.' },
+        { label: '5. Inpatient Active Medications', ok: true, desc: 'IV Ceftriaxone, Losartan 50mg, Albuterol documented.' },
+        { label: '6. Allergy Assessment', ok: true, desc: 'No Known Drug Allergies (NKDA) confirmed in EHR.' },
+        { label: '7. Physical Exam & Lung Sounds', ok: true, desc: 'Light end-inspiratory crackles right lower lobe improving.' },
+        { label: '8. Bedside Vitals Telemetry', ok: true, desc: 'BP 118/74 mmHg, Temp 37.1°C, HR 78, SpO2 98% room air.' },
+        { label: '9. Inflammatory Biomarkers (WBC / CRP)', ok: labsOk, desc: labsOk ? 'Cerner LIS WBC 8.2 x10^9/L, CRP 6.5 mg/L, Procalcitonin 0.11 ng/mL.' : 'Pending: Automated Cerner LIS biomarker telemetry ingestion needed.' },
+        { label: '10. Comorbidity Specificity (ACO J44.9)', ok: acoOk, desc: acoOk ? 'Asthma-COPD Overlap (ACO) specified with ICD-10 J44.9 / J45.30.' : 'Pending: Clarify comorbidity specificity for Asthma/COPD overlap.' },
+        { label: '11. Antimicrobial Stewardship Plan', ok: planOk, desc: planOk ? 'Oral Amox/Clav 875/125mg BID (7-day total duration target) documented.' : 'Pending: Define ATS/IDSA guideline 7-day stewardship target.' }
+      ];
+
+      const completedCount = items.filter(i => i.ok).length;
+      const pct = Math.round((completedCount / 11) * 100);
+
+      const sumText = document.getElementById('ckSummaryText');
+      if (sumText) sumText.innerText = `${completedCount} / 11 Completed (${pct}%)`;
+      const sumBar = document.getElementById('ckSummaryBar');
+      if (sumBar) {
+        sumBar.style.width = `${pct}%`;
+        sumBar.className = completedCount === 11 
+          ? 'h-full bg-emerald-600 transition-all duration-500 rounded-full' 
+          : 'h-full bg-amber-500 transition-all duration-500 rounded-full';
+      }
+
+      grid.innerHTML = items.map(item => `
+        <div class="bg-white p-4 rounded-xl border-l-4 shadow-sm transition-all ${item.ok ? 'border-l-emerald-600 border border-slate-200' : 'border-l-amber-500 border border-amber-200 bg-amber-50/20'}">
+          <div class="flex justify-between items-start">
+            <span class="text-xs font-bold ${item.ok ? 'text-slate-900' : 'text-amber-900'}">${item.label}</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${item.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-800'}">
+              ${item.ok ? '✓ Compliant' : '⚠ Action Required'}
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">${item.desc}</p>
+        </div>
+      `).join('');
+    };
+
+    window.insertCernerLabs = function() {
+      const textarea = document.getElementById('soapNoteTextarea');
+      const labSnippet = "• Ingested LOINC Biomarkers (Aug 18):\n  - WBC: 8.2 x10^9/L (down from 14.1)\n  - CRP: 6.5 mg/L (down from 45.0, 85% reduction)\n  - Procalcitonin: 0.11 ng/mL (Resolved / Normal < 0.25)";
+      
+      if (textarea && !textarea.value.includes('Ingested LOINC Biomarkers')) {
+        const objIdx = textarea.value.indexOf('ASSESSMENT:');
+        if (objIdx !== -1) {
+          textarea.value = textarea.value.slice(0, objIdx) + labSnippet + "\n\n" + textarea.value.slice(objIdx);
+        } else {
+          textarea.value += "\n" + labSnippet;
+        }
+      }
+
+      window.docPatchState.appliedLabs = true;
+      window.appScoreState.labAccepted = true;
+      window.updateGlobalScores();
+      window.renderStep4Checklist();
+
+      const banner = document.getElementById('bannerLabs');
+      if (banner) banner.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      const btn = document.getElementById('btnInsertLabs');
+      if (btn) {
+        btn.innerHTML = '<span>INGESTED ✓ LOINC Biomarkers Linked</span>';
+        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btn.onclick = null;
+      }
+
+      logAuditMessage('Biomarker telemetry ingested from Cerner LIS (+10% Quality)');
+      showToast('Cerner LIS Biomarkers Ingested (+10% Quality)', 'success');
+    };
+
+    window.clarifyAcoSpecificity = function() {
+      const textarea = document.getElementById('soapNoteTextarea');
+      if (textarea) {
+        textarea.value = textarea.value.replace(
+          "• Community-Acquired Pneumonia (unspecified).",
+          "1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO) - Specified (ICD-10 J44.9 / J45.30).\n3. Essential Hypertension - Stable."
+        );
+      }
+
+      window.docPatchState.appliedAco = true;
+      window.appScoreState.acoAccepted = true;
+      window.updateGlobalScores();
+      window.renderStep4Checklist();
+
+      const banner = document.getElementById('bannerAco');
+      if (banner) banner.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      const btn = document.getElementById('btnClarifyAco');
+      if (btn) {
+        btn.innerHTML = '<span>OPTIMIZED ✓ ICD-10 J44.9/J45.30 Specified</span>';
+        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btn.onclick = null;
+      }
+
+      logAuditMessage('Diagnosis specificity refined to Asthma-COPD Overlap (+8% Quality)');
+      showToast('Diagnosis Specificity Applied (+8% Quality)', 'success');
+    };
+
+    window.applyStewardshipPlan = function() {
+      const textarea = document.getElementById('soapNoteTextarea');
+      if (textarea) {
+        textarea.value = textarea.value.replace(
+          "• IV Ceftriaxone + Azithromycin, supplemental O2, monitoring.",
+          "• Step-down to oral antibiotics: Amox/Clav 875/125mg PO BID.\n• Total treatment duration: 7-day stewardship target.\n• Discharge criteria met per ATS/IDSA guidelines."
+        );
+      }
+
+      window.docPatchState.appliedPlan = true;
+      window.appScoreState.stewardshipAccepted = true;
+      window.updateGlobalScores();
+      window.renderStep4Checklist();
+
+      const banner = document.getElementById('bannerPlan');
+      if (banner) banner.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      const btn = document.getElementById('btnApplyPlan');
+      if (btn) {
+        btn.innerHTML = '<span>VERIFIED ✓ ATS/IDSA Stewardship Target Set</span>';
+        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btn.onclick = null;
+      }
+
+      logAuditMessage('Antimicrobial stewardship plan validated (+6% Quality)');
+      showToast('ATS/IDSA Stewardship Plan Applied (+6% Quality)', 'success');
+    };
+
+    window.resetToRawDraft = function() {
+      window.docPatchState = {
+        appliedLabs: false,
+        appliedAco: false,
+        appliedPlan: false
+      };
+      window.appScoreState.labAccepted = false;
+      window.appScoreState.acoAccepted = false;
+      window.appScoreState.stewardshipAccepted = false;
+
+      const textarea = document.getElementById('soapNoteTextarea');
+      if (textarea) {
+        textarea.value = `SUBJECTIVE:\n• 71yo female admitted with fever, productive cough, and pleuritic chest pain.\n• Worsening shortness of breath for 4 days.\n• Known history of mild asthma.\n\nOBJECTIVE:\n• Vitals: BP 138/84 mmHg | HR 102 bpm | RR 24 | Temp 38.8°C | SpO2 89% on room air.\n• Physical Exam: Crackles in right middle and lower lobes, bilateral expiratory wheezes.\n\nASSESSMENT:\n• Community-Acquired Pneumonia (unspecified).\n\nPLAN:\n• IV Ceftriaxone + Azithromycin, supplemental O2, monitoring.`;
+      }
+
+      const bLabs = document.getElementById('bannerLabs');
+      if (bLabs) bLabs.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2';
+      const btnL = document.getElementById('btnInsertLabs');
+      if (btnL) {
+        btnL.innerHTML = '<span>+ Insert Cerner LIS Biomarkers</span>';
+        btnL.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5';
+        btnL.onclick = window.insertCernerLabs;
+      }
+
+      const bAco = document.getElementById('bannerAco');
+      if (bAco) bAco.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2';
+      const btnA = document.getElementById('btnClarifyAco');
+      if (btnA) {
+        btnA.innerHTML = '<span>+ Clarify Comorbidity Specificity</span>';
+        btnA.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5';
+        btnA.onclick = window.clarifyAcoSpecificity;
+      }
+
+      const bPlan = document.getElementById('bannerPlan');
+      if (bPlan) bPlan.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2';
+      const btnP = document.getElementById('btnApplyPlan');
+      if (btnP) {
+        btnP.innerHTML = '<span>+ Apply ATS/IDSA Plan Target</span>';
+        btnP.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5';
+        btnP.onclick = window.applyStewardshipPlan;
+      }
+
+      window.updateGlobalScores();
+      window.renderStep4Checklist();
+      logAuditMessage('Reset document to raw baseline physician draft (68% Quality)');
+      showToast('Reset to Raw Physician Draft (68% Quality)', 'info');
+    };
+
+    window.quickFillOptimalNote = function() {
+      window.docPatchState = {
+        appliedLabs: true,
+        appliedAco: true,
+        appliedPlan: true
+      };
+      window.appScoreState.labAccepted = true;
+      window.appScoreState.acoAccepted = true;
+      window.appScoreState.stewardshipAccepted = true;
+
+      const textarea = document.getElementById('soapNoteTextarea');
+      if (textarea) {
+        textarea.value = `SUBJECTIVE:\n• 71yo female admitted with fever, productive cough, and pleuritic chest pain.\n• Worsening shortness of breath for 4 days.\n• Known history of mild asthma.\n• Day 3: Reports feeling better, cough improving, pleuritic pain decreased. Afebrile x 24h.\n\nOBJECTIVE:\n• Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% on room air.\n• Physical Exam: Light end-inspiratory crackles right lower lobe. Improving compared to Day 1. No wheezing.\n• Ingested LOINC Biomarkers (Aug 18):\n  - WBC: 8.2 x10^9/L (down from 14.1)\n  - CRP: 6.5 mg/L (down from 45.0, 85% reduction)\n  - Procalcitonin: 0.11 ng/mL (Resolved / Normal < 0.25)\n\nASSESSMENT:\n1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO) - Specified (ICD-10 J44.9 / J45.30).\n3. Essential Hypertension - Stable.\n\nPLAN:\n• Step-down to oral antibiotics: Amox/Clav 875/125mg PO BID.\n• Total treatment duration: 7-day stewardship target.\n• Discharge criteria met per ATS/IDSA guidelines.`;
+      }
+
+      const bLabs = document.getElementById('bannerLabs');
+      if (bLabs) bLabs.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      const btnL = document.getElementById('btnInsertLabs');
+      if (btnL) {
+        btnL.innerHTML = '<span>INGESTED ✓ LOINC Biomarkers Linked</span>';
+        btnL.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btnL.onclick = null;
+      }
+
+      const bAco = document.getElementById('bannerAco');
+      if (bAco) bAco.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      const btnA = document.getElementById('btnClarifyAco');
+      if (btnA) {
+        btnA.innerHTML = '<span>OPTIMIZED ✓ ICD-10 J44.9/J45.30 Specified</span>';
+        btnA.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btnA.onclick = null;
+      }
+
+      const bPlan = document.getElementById('bannerPlan');
+      if (bPlan) bPlan.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      const btnP = document.getElementById('btnApplyPlan');
+      if (btnP) {
+        btnP.innerHTML = '<span>VERIFIED ✓ ATS/IDSA Stewardship Target Set</span>';
+        btnP.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btnP.onclick = null;
+      }
+
+      window.updateGlobalScores();
+      window.renderStep4Checklist();
+      logAuditMessage('Applied optimal clinical documentation bundle (92% Quality / 89% Research Readiness)');
+      showToast('Optimal Clinical Protocol Applied (92% Quality / 89% Research)', 'success');
+    };
+
+
+    // ==============================================================
     // STEP 3 INTERACTIVE KINETICS & STATE ENGINE
     // ==============================================================
     window.docPatchState = {
@@ -1108,34 +1341,56 @@ Plan: IV Ceftriaxone + Azithromycin, supplemental O2, monitoring.</textarea>
 
     </div>
 
-    <div id="screen-4" class="space-y-6 max-w-6xl mx-auto fade-in hidden">
-        <div class="card-hospital p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div class="flex items-center gap-2">
-              <h2 class="text-xl font-bold text-slate-900">Step 4: Clinical Review & CAP Checklist</h2>
-              <span class="px-2 py-0.5 rounded text-xs font-bold badge-teal">ATS/IDSA Criteria</span>
-            </div>
-            <p class="text-xs text-slate-500 mt-1">11-Point CAP documentation checklist dynamically evaluated by <code>evaluateClinicalNote</code>.</p>
+    <!-- ============================================================== -->
+    <!-- STEP 4: CLINICAL REVIEW (11-POINT CAP CHECKLIST EVALUATION)    -->
+    <!-- ============================================================== -->
+    <div id="screen-4" class="space-y-6 max-w-6xl mx-auto fade-in" style="display: none;">
+      
+      <!-- Top Header Card -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-xl font-bold text-slate-900">Clinical Review & CAP Checklist</h2>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">ATS / IDSA Criteria</span>
           </div>
-
-          <div class="flex items-center gap-3">
-            <div class="text-right">
-              <div class="text-xs font-bold text-slate-800" id="ckSummaryText">8 / 11 Completed (73%)</div>
-              <div class="w-32 h-2 rounded-full bg-slate-100 overflow-hidden mt-1">
-                <div class="h-full bg-amber-500 transition-all duration-500" id="ckSummaryBar" style="width: 73%;"></div>
-              </div>
-            </div>
-            <button onclick="navigateTo(5)" class="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-soft flex items-center gap-1.5 transition-all cursor-pointer">
-              <span>Step 5: AI Recommendations →</span>
-            </button>
-          </div>
+          <p class="text-xs text-slate-500 mt-1">11-Point Community-Acquired Pneumonia clinical documentation quality checklist.</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="checklistDetailedList"></div>
+        <div class="flex items-center gap-4">
+          <div class="text-right">
+            <div class="text-xs font-bold text-slate-800" id="ckSummaryText">8 / 11 Completed (73%)</div>
+            <div class="w-36 h-2.5 rounded-full bg-slate-100 overflow-hidden mt-1.5">
+              <div class="h-full bg-amber-500 transition-all duration-500 rounded-full" id="ckSummaryBar" style="width: 73%;"></div>
+            </div>
+          </div>
+          <button onclick="navigateTo(5)" class="px-4 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-soft flex items-center gap-2 transition-all cursor-pointer">
+            <span>AI Recommendations →</span>
+          </button>
+        </div>
       </div>
 
-      <!-- STEP 5: AI RECOMMENDATIONS & CDS -->
-      <div id="screen-5" class="space-y-6 max-w-7xl mx-auto fade-in hidden">
+      <!-- 11-Point Checklist Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="checklistDetailedList">
+        <!-- Rendered dynamically by renderStep4Checklist() -->
+      </div>
+
+      <!-- Quick Navigate to Fix Items -->
+      <div class="p-5 bg-teal-50/70 border border-teal-200 rounded-2xl flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-teal-700 text-white flex items-center justify-center font-bold text-sm">✓</div>
+          <div>
+            <div class="text-xs font-bold text-slate-900">Live EHR CDS Integration Active</div>
+            <div class="text-[11px] text-slate-600">Apply pending clinical patches in Step 3 to achieve 100% compliance.</div>
+          </div>
+        </div>
+        <button onclick="navigateTo(3)" class="px-3.5 py-2 bg-white hover:bg-slate-50 text-teal-800 border border-teal-200 text-xs font-bold rounded-xl shadow-2xs transition-all cursor-pointer">
+          ← Edit SOAP Document
+        </button>
+      </div>
+
+    </div>
+
+    <div id="screen-5" class="space-y-6 max-w-7xl mx-auto fade-in hidden">
         <div class="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto pb-1">
           <button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
           <span>›</span>
@@ -1693,6 +1948,239 @@ Plan: IV Ceftriaxone + Azithromycin, supplemental O2, monitoring.</textarea>
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
+
+    // ==============================================================
+    // STEP 4 CHECKLIST RENDERING & LIVE RECALCULATION
+    // ==============================================================
+    window.renderStep4Checklist = function() {
+      const grid = document.getElementById('checklistDetailedList');
+      if (!grid) return;
+
+      const labsOk = !!window.docPatchState.appliedLabs;
+      const acoOk = !!window.docPatchState.appliedAco;
+      const planOk = !!window.docPatchState.appliedPlan;
+
+      const items = [
+        { label: '1. Patient Demographics & Age', ok: true, desc: 'Sarah Al-Otaibi, 71y, Female (MRN 882934) verified with EHR Registry.' },
+        { label: '2. Chief Complaint', ok: true, desc: 'Documented fever, productive cough, and pleuritic chest pain.' },
+        { label: '3. History of Present Illness (HPI)', ok: true, desc: 'Day 3 interval symptom review & resolution trajectory noted.' },
+        { label: '4. Review of Systems (ROS)', ok: true, desc: 'Negative for acute chills; afebrile x 24 hours confirmed.' },
+        { label: '5. Inpatient Active Medications', ok: true, desc: 'IV Ceftriaxone, Losartan 50mg, Albuterol documented.' },
+        { label: '6. Allergy Assessment', ok: true, desc: 'No Known Drug Allergies (NKDA) confirmed in EHR.' },
+        { label: '7. Physical Exam & Lung Sounds', ok: true, desc: 'Light end-inspiratory crackles right lower lobe improving.' },
+        { label: '8. Bedside Vitals Telemetry', ok: true, desc: 'BP 118/74 mmHg, Temp 37.1°C, HR 78, SpO2 98% room air.' },
+        { label: '9. Inflammatory Biomarkers (WBC / CRP)', ok: labsOk, desc: labsOk ? 'Cerner LIS WBC 8.2 x10^9/L, CRP 6.5 mg/L, Procalcitonin 0.11 ng/mL.' : 'Pending: Automated Cerner LIS biomarker telemetry ingestion needed.' },
+        { label: '10. Comorbidity Specificity (ACO J44.9)', ok: acoOk, desc: acoOk ? 'Asthma-COPD Overlap (ACO) specified with ICD-10 J44.9 / J45.30.' : 'Pending: Clarify comorbidity specificity for Asthma/COPD overlap.' },
+        { label: '11. Antimicrobial Stewardship Plan', ok: planOk, desc: planOk ? 'Oral Amox/Clav 875/125mg BID (7-day total duration target) documented.' : 'Pending: Define ATS/IDSA guideline 7-day stewardship target.' }
+      ];
+
+      const completedCount = items.filter(i => i.ok).length;
+      const pct = Math.round((completedCount / 11) * 100);
+
+      const sumText = document.getElementById('ckSummaryText');
+      if (sumText) sumText.innerText = `${completedCount} / 11 Completed (${pct}%)`;
+      const sumBar = document.getElementById('ckSummaryBar');
+      if (sumBar) {
+        sumBar.style.width = `${pct}%`;
+        sumBar.className = completedCount === 11 
+          ? 'h-full bg-emerald-600 transition-all duration-500 rounded-full' 
+          : 'h-full bg-amber-500 transition-all duration-500 rounded-full';
+      }
+
+      grid.innerHTML = items.map(item => `
+        <div class="bg-white p-4 rounded-xl border-l-4 shadow-sm transition-all ${item.ok ? 'border-l-emerald-600 border border-slate-200' : 'border-l-amber-500 border border-amber-200 bg-amber-50/20'}">
+          <div class="flex justify-between items-start">
+            <span class="text-xs font-bold ${item.ok ? 'text-slate-900' : 'text-amber-900'}">${item.label}</span>
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${item.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-800'}">
+              ${item.ok ? '✓ Compliant' : '⚠ Action Required'}
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1 leading-relaxed">${item.desc}</p>
+        </div>
+      `).join('');
+    };
+
+    window.insertCernerLabs = function() {
+      const textarea = document.getElementById('soapNoteTextarea');
+      const labSnippet = "• Ingested LOINC Biomarkers (Aug 18):\n  - WBC: 8.2 x10^9/L (down from 14.1)\n  - CRP: 6.5 mg/L (down from 45.0, 85% reduction)\n  - Procalcitonin: 0.11 ng/mL (Resolved / Normal < 0.25)";
+      
+      if (textarea && !textarea.value.includes('Ingested LOINC Biomarkers')) {
+        const objIdx = textarea.value.indexOf('ASSESSMENT:');
+        if (objIdx !== -1) {
+          textarea.value = textarea.value.slice(0, objIdx) + labSnippet + "\n\n" + textarea.value.slice(objIdx);
+        } else {
+          textarea.value += "\n" + labSnippet;
+        }
+      }
+
+      window.docPatchState.appliedLabs = true;
+      window.appScoreState.labAccepted = true;
+      window.updateGlobalScores();
+      window.renderStep4Checklist();
+
+      const banner = document.getElementById('bannerLabs');
+      if (banner) banner.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      const btn = document.getElementById('btnInsertLabs');
+      if (btn) {
+        btn.innerHTML = '<span>INGESTED ✓ LOINC Biomarkers Linked</span>';
+        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btn.onclick = null;
+      }
+
+      logAuditMessage('Biomarker telemetry ingested from Cerner LIS (+10% Quality)');
+      showToast('Cerner LIS Biomarkers Ingested (+10% Quality)', 'success');
+    };
+
+    window.clarifyAcoSpecificity = function() {
+      const textarea = document.getElementById('soapNoteTextarea');
+      if (textarea) {
+        textarea.value = textarea.value.replace(
+          "• Community-Acquired Pneumonia (unspecified).",
+          "1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO) - Specified (ICD-10 J44.9 / J45.30).\n3. Essential Hypertension - Stable."
+        );
+      }
+
+      window.docPatchState.appliedAco = true;
+      window.appScoreState.acoAccepted = true;
+      window.updateGlobalScores();
+      window.renderStep4Checklist();
+
+      const banner = document.getElementById('bannerAco');
+      if (banner) banner.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      const btn = document.getElementById('btnClarifyAco');
+      if (btn) {
+        btn.innerHTML = '<span>OPTIMIZED ✓ ICD-10 J44.9/J45.30 Specified</span>';
+        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btn.onclick = null;
+      }
+
+      logAuditMessage('Diagnosis specificity refined to Asthma-COPD Overlap (+8% Quality)');
+      showToast('Diagnosis Specificity Applied (+8% Quality)', 'success');
+    };
+
+    window.applyStewardshipPlan = function() {
+      const textarea = document.getElementById('soapNoteTextarea');
+      if (textarea) {
+        textarea.value = textarea.value.replace(
+          "• IV Ceftriaxone + Azithromycin, supplemental O2, monitoring.",
+          "• Step-down to oral antibiotics: Amox/Clav 875/125mg PO BID.\n• Total treatment duration: 7-day stewardship target.\n• Discharge criteria met per ATS/IDSA guidelines."
+        );
+      }
+
+      window.docPatchState.appliedPlan = true;
+      window.appScoreState.stewardshipAccepted = true;
+      window.updateGlobalScores();
+      window.renderStep4Checklist();
+
+      const banner = document.getElementById('bannerPlan');
+      if (banner) banner.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      const btn = document.getElementById('btnApplyPlan');
+      if (btn) {
+        btn.innerHTML = '<span>VERIFIED ✓ ATS/IDSA Stewardship Target Set</span>';
+        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btn.onclick = null;
+      }
+
+      logAuditMessage('Antimicrobial stewardship plan validated (+6% Quality)');
+      showToast('ATS/IDSA Stewardship Plan Applied (+6% Quality)', 'success');
+    };
+
+    window.resetToRawDraft = function() {
+      window.docPatchState = {
+        appliedLabs: false,
+        appliedAco: false,
+        appliedPlan: false
+      };
+      window.appScoreState.labAccepted = false;
+      window.appScoreState.acoAccepted = false;
+      window.appScoreState.stewardshipAccepted = false;
+
+      const textarea = document.getElementById('soapNoteTextarea');
+      if (textarea) {
+        textarea.value = `SUBJECTIVE:\n• 71yo female admitted with fever, productive cough, and pleuritic chest pain.\n• Worsening shortness of breath for 4 days.\n• Known history of mild asthma.\n\nOBJECTIVE:\n• Vitals: BP 138/84 mmHg | HR 102 bpm | RR 24 | Temp 38.8°C | SpO2 89% on room air.\n• Physical Exam: Crackles in right middle and lower lobes, bilateral expiratory wheezes.\n\nASSESSMENT:\n• Community-Acquired Pneumonia (unspecified).\n\nPLAN:\n• IV Ceftriaxone + Azithromycin, supplemental O2, monitoring.`;
+      }
+
+      const bLabs = document.getElementById('bannerLabs');
+      if (bLabs) bLabs.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2';
+      const btnL = document.getElementById('btnInsertLabs');
+      if (btnL) {
+        btnL.innerHTML = '<span>+ Insert Cerner LIS Biomarkers</span>';
+        btnL.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5';
+        btnL.onclick = window.insertCernerLabs;
+      }
+
+      const bAco = document.getElementById('bannerAco');
+      if (bAco) bAco.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2';
+      const btnA = document.getElementById('btnClarifyAco');
+      if (btnA) {
+        btnA.innerHTML = '<span>+ Clarify Comorbidity Specificity</span>';
+        btnA.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5';
+        btnA.onclick = window.clarifyAcoSpecificity;
+      }
+
+      const bPlan = document.getElementById('bannerPlan');
+      if (bPlan) bPlan.className = 'p-4 rounded-xl border border-amber-200 bg-amber-50/70 transition-all space-y-2';
+      const btnP = document.getElementById('btnApplyPlan');
+      if (btnP) {
+        btnP.innerHTML = '<span>+ Apply ATS/IDSA Plan Target</span>';
+        btnP.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer flex items-center gap-1.5';
+        btnP.onclick = window.applyStewardshipPlan;
+      }
+
+      window.updateGlobalScores();
+      window.renderStep4Checklist();
+      logAuditMessage('Reset document to raw baseline physician draft (68% Quality)');
+      showToast('Reset to Raw Physician Draft (68% Quality)', 'info');
+    };
+
+    window.quickFillOptimalNote = function() {
+      window.docPatchState = {
+        appliedLabs: true,
+        appliedAco: true,
+        appliedPlan: true
+      };
+      window.appScoreState.labAccepted = true;
+      window.appScoreState.acoAccepted = true;
+      window.appScoreState.stewardshipAccepted = true;
+
+      const textarea = document.getElementById('soapNoteTextarea');
+      if (textarea) {
+        textarea.value = `SUBJECTIVE:\n• 71yo female admitted with fever, productive cough, and pleuritic chest pain.\n• Worsening shortness of breath for 4 days.\n• Known history of mild asthma.\n• Day 3: Reports feeling better, cough improving, pleuritic pain decreased. Afebrile x 24h.\n\nOBJECTIVE:\n• Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% on room air.\n• Physical Exam: Light end-inspiratory crackles right lower lobe. Improving compared to Day 1. No wheezing.\n• Ingested LOINC Biomarkers (Aug 18):\n  - WBC: 8.2 x10^9/L (down from 14.1)\n  - CRP: 6.5 mg/L (down from 45.0, 85% reduction)\n  - Procalcitonin: 0.11 ng/mL (Resolved / Normal < 0.25)\n\nASSESSMENT:\n1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO) - Specified (ICD-10 J44.9 / J45.30).\n3. Essential Hypertension - Stable.\n\nPLAN:\n• Step-down to oral antibiotics: Amox/Clav 875/125mg PO BID.\n• Total treatment duration: 7-day stewardship target.\n• Discharge criteria met per ATS/IDSA guidelines.`;
+      }
+
+      const bLabs = document.getElementById('bannerLabs');
+      if (bLabs) bLabs.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      const btnL = document.getElementById('btnInsertLabs');
+      if (btnL) {
+        btnL.innerHTML = '<span>INGESTED ✓ LOINC Biomarkers Linked</span>';
+        btnL.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btnL.onclick = null;
+      }
+
+      const bAco = document.getElementById('bannerAco');
+      if (bAco) bAco.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      const btnA = document.getElementById('btnClarifyAco');
+      if (btnA) {
+        btnA.innerHTML = '<span>OPTIMIZED ✓ ICD-10 J44.9/J45.30 Specified</span>';
+        btnA.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btnA.onclick = null;
+      }
+
+      const bPlan = document.getElementById('bannerPlan');
+      if (bPlan) bPlan.className = 'p-4 rounded-xl border border-emerald-300 bg-emerald-50 transition-all space-y-2';
+      const btnP = document.getElementById('btnApplyPlan');
+      if (btnP) {
+        btnP.innerHTML = '<span>VERIFIED ✓ ATS/IDSA Stewardship Target Set</span>';
+        btnP.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default flex items-center gap-1.5';
+        btnP.onclick = null;
+      }
+
+      window.updateGlobalScores();
+      window.renderStep4Checklist();
+      logAuditMessage('Applied optimal clinical documentation bundle (92% Quality / 89% Research Readiness)');
+      showToast('Optimal Clinical Protocol Applied (92% Quality / 89% Research)', 'success');
+    };
+
 
     // ==============================================================
     // STEP 3 INTERACTIVE KINETICS & STATE ENGINE
