@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocIQ Live — Hospital Workstation</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+
+    // ==============================================================
+    // MASTER ROUTING & NAVIGATION ENGINE
+    // ==============================================================
+    window.setStep = function(step) {
+      window.navigateTo(step);
+    };
+
+    window.navigateTo = function(step) {
+      const targetStep = Math.min(Math.max(Number(step) || 1, 1), 7);
+      currentStep = targetStep;
+
+      // 1. Toggle visibility of all 7 screen containers
+      for (let s = 1; s <= 7; s++) {
+        const screenEl = document.getElementById('screen-' + s);
+        if (screenEl) {
+          if (s === targetStep) {
+            screenEl.style.setProperty('display', 'block', 'important');
+            screenEl.classList.remove('hidden');
+          } else {
+            screenEl.style.setProperty('display', 'none', 'important');
+            screenEl.classList.add('hidden');
+          }
+        }
+
+        // Sidebar Buttons
+        const sideBtn = document.getElementById('stepBtn-' + s);
+        if (sideBtn) {
+          const isActive = (s === targetStep);
+          sideBtn.className = isActive
+            ? 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-soft'
+            : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
+        }
+      }
+
+      // 2. Step 7 Specific update
+      if (targetStep === 7) {
+        updateFinalRecordDisplay();
+      }
+
+      // 3. Scroll to top smoothly
+      const mainWorkspace = document.querySelector('main');
+      if (mainWorkspace) {
+        mainWorkspace.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    function navigateTo(step) {
+      window.navigateTo(step);
+    }
+
+
+    function evaluateClinicalNote(note) {
+      const checklist = {
+        demographics: Boolean(note.patientId && note.age),
+        chiefComplaint: Boolean(note.chiefComplaint && note.chiefComplaint.length > 5),
+        hpi: Boolean(note.hpi && note.hpi.length > 20),
+        ros: Boolean(note.ros),
+        medications: Boolean(note.medications && note.medications.length > 0),
+        allergies: Boolean(note.allergies),
+        physicalExam: Boolean(note.physicalExam && note.physicalExam.length > 20),
+        vitals: Boolean(note.vitals && note.vitals.bp && note.vitals.temp && note.vitals.spo2),
+        biomarkers: Boolean(note.labs && note.labs.wbc && note.labs.crp),
+        diagnosisSpecific: Boolean(note.diagnosisCode && note.diagnosisCode.includes('J44')),
+        stewardshipPlan: Boolean(note.plan && (note.plan.toLowerCase().includes('amoxicillin') || note.plan.toLowerCase().includes('amox/clav') || note.plan.toLowerCase().includes('augmentin')) && note.plan.toLowerCase().includes('7-day'))
+      };
+
+      const completedCount = Object.values(checklist).filter(Boolean).length;
+      const completenessRatio = completedCount / 11;
+
+      const completenessScore = completenessRatio * 100;
+      const clarityScore = checklist.biomarkers && checklist.vitals ? 90.0 : 65.0;
+      const consistencyScore = checklist.diagnosisSpecific ? 90.0 : 60.0;
+      const organizationScore = 100.0;
+
+      let rawQuality = (
+        (completenessScore * 0.40) +
+        (clarityScore * 0.20) +
+        (consistencyScore * 0.20) +
+        (organizationScore * 0.20)
+      );
+
+      if (!checklist.biomarkers && !checklist.diagnosisSpecific && !checklist.stewardshipPlan) {
+        rawQuality = Math.min(rawQuality, 68.0);
+      }
+
+      const keyVariablesScore = (checklist.biomarkers && checklist.vitals && checklist.diagnosisSpecific) ? 90.0 : 60.0;
+      const dataCompletenessScore = completenessRatio * 100;
+      const structuredDocScore = 80.0;
+      const dataConsistencyScore = 100.0;
+
+      const researchScore = (
+        (keyVariablesScore * 0.40) +
+        (dataCompletenessScore * 0.30) +
+        (structuredDocScore * 0.20) +
+        (dataConsistencyScore * 0.10)
+      );
+
+      return {
+        checklist,
+        completedItems: completedCount,
+        totalItems: 11,
+        completenessRatio,
+        completenessScore,
+        clarityScore,
+        consistencyScore,
+        organizationScore,
+        qualityScore: Math.round(rawQuality),
+        researchScore: Math.round(researchScore),
+        completenessWeight: (completenessScore * 0.40),
+        clarityWeight: (clarityScore * 0.20),
+        consistencyWeight: (consistencyScore * 0.20),
+        organizationWeight: (organizationScore * 0.20),
+        keyVariablesWeight: (keyVariablesScore * 0.40),
+        dataCompletenessWeight: (dataCompletenessScore * 0.30),
+        structuredDocWeight: (structuredDocScore * 0.20),
+        dataConsistencyWeight: (dataConsistencyScore * 0.10),
+        isApprovedForFinalize: rawQuality >= 90
+      };
+    }
+
+    let currentStep = 1;
+    let isLabAccepted = false;
+    let isAcoAccepted = false;
+    let isPlanAccepted = false;
+    let isRecordSigned = false;
+
+    // ==============================================================
+    // CLINICAL DATA MODIFICATIONS AUDIT LOG SYSTEM (NO ROUTING LOGS)
+    // ==============================================================
+    const defaultAuditLogs = [
+      {
+        id: 'evt-1',
+        category: 'EHR Ingest',
+        title: 'Initial EHR Demographic Ingestion',
+        actor: 'Cerner / Epic Bridge',
+        timestamp: '2026-08-27 18:40:12',
+        payload: 'Sarah Al-Otaibi baseline inpatient profile loaded (MRN: 882934, Room 402-B).'
+      },
+      {
+        id: 'evt-2',
+        category: 'EHR Ingest',
+        title: 'LIS Lab Ingestion',
+        actor: 'LOINC Bridge',
+        timestamp: '2026-08-27 18:42:05',
+        payload: 'Ingested LOINC-mapped labs (WBC 8.2 x10^9/L, CRP 6.5 mg/L, Procalcitonin 0.11 ng/mL).'
+      }
+    ];
+
+    let auditLogs = [...defaultAuditLogs];
+
+    function appendClinicalAuditLog(category, title, actor, payload) {
+      const now = new Date();
+      const timeStr = now.getFullYear() + '-' +
+        String(now.getMonth()+1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0') + ' ' +
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0') + ':' +
+        String(now.getSeconds()).padStart(2, '0');
+
+      const entry = {
+        id: 'evt-' + Date.now() + '-' + Math.floor(Math.random()*1000),
+        category,
+        title,
+        actor,
+        timestamp: timeStr,
+        payload
+      };
+
+      auditLogs.unshift(entry); // Prepend: newest modification at top
+      renderAuditLogs();
+
+      const counterBadge = document.getElementById('auditEventCounter');
+      if (counterBadge) counterBadge.innerText = `${auditLogs.length} Clinical Events`;
+      const headerCount = document.getElementById('auditHeaderCountBadge');
+      if (headerCount) headerCount.innerText = `${auditLogs.length}`;
+    }
+
+    function renderAuditLogs() {
+      const container = document.getElementById('auditLogsContainer');
+      if (!container) return;
+
+      const categoryStyles = {
+        'Clinician Modification': { badge: 'badge-emerald', icon: '🩺' },
+        'Clinician Override': { badge: 'badge-amber', icon: '⚠️' },
+        'EHR Ingest': { badge: 'badge-teal', icon: '🧪' },
+        'Diagnostic Refinement': { badge: 'badge-blue', icon: '🏷️' },
+        'Clinical Guideline Action': { badge: 'badge-amber', icon: '💊' },
+        'Security': { badge: 'badge-purple', icon: '🔒' }
+      };
+
+      container.innerHTML = auditLogs.map(item => {
+        const style = categoryStyles[item.category] || { badge: 'badge-teal', icon: '📋' };
+        return `
+          <div class="card-hospital p-4 space-y-2 fade-in hover:border-slate-300 transition-all">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${style.badge} flex items-center gap-1">
+                  <span>${style.icon}</span>
+                  <span>${item.category}</span>
+                </span>
+                <span class="font-bold text-xs text-slate-900">${item.title}</span>
+              </div>
+              <div class="text-[11px] font-mono text-slate-400 font-semibold">${item.timestamp}</div>
+            </div>
+            <p class="text-xs text-slate-700 leading-relaxed font-medium">${item.payload}</p>
+            <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-100 flex items-center justify-between">
+              <span>Actor: <strong class="text-slate-700">${item.actor}</strong></span>
+              <span class="font-mono text-[9px]">ID: ${item.id}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function downloadAuditLogJson() {
+      const blob = new Blob([JSON.stringify(auditLogs, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'audit_trail_sarah_alotaibi.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('Audit Log Exported', 'audit_trail_sarah_alotaibi.json downloaded to your machine.', 'success');
+    }
+
+    function clearTransientLogs() {
+      auditLogs = [...defaultAuditLogs];
+      renderAuditLogs();
+      const counterBadge = document.getElementById('auditEventCounter');
+      if (counterBadge) counterBadge.innerText = `${auditLogs.length} Clinical Events`;
+      const headerCount = document.getElementById('auditHeaderCountBadge');
+      if (headerCount) headerCount.innerText = `${auditLogs.length}`;
+      showToast('Audit Log Reset', 'Reset to initial baseline clinical events.', 'info');
+    }
+
+    function generateFhirR4Bundle() {
+      const subj = document.getElementById('subjectiveTextarea') ? document.getElementById('subjectiveTextarea').value : '';
+      const obj = document.getElementById('objectiveTextarea') ? document.getElementById('objectiveTextarea').value : '';
+      const assess = document.getElementById('assessmentTextarea') ? document.getElementById('assessmentTextarea').value : '';
+      const plan = document.getElementById('planTextarea') ? document.getElementById('planTextarea').value : '';
+
+      const timestamp = new Date().toISOString();
+
+      return {
+        "resourceType": "Bundle",
+        "id": "bundle-dociq-882934-" + Date.now(),
+        "meta": {
+          "versionId": "1.3",
+          "lastUpdated": timestamp,
+          "profile": ["http://hl7.org/fhir/us/core/StructureDefinition/us-core-documentbundle"]
+        },
+        "identifier": {
+          "system": "urn:ietf:rfc:3986",
+          "value": "urn:uuid:dociq-enc-882934"
+        },
+        "type": "document",
+        "timestamp": timestamp,
+        "entry": [
+          {
+            "fullUrl": "urn:uuid:composition-882934",
+            "resource": {
+              "resourceType": "Composition",
+              "id": "comp-882934",
+              "status": "final",
+              "type": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "11488-4",
+                    "display": "Consultation Note / Progress Note"
+                  }
+                ],
+                "text": "Inpatient CAP Progress Note & Step-Down"
+              },
+              "subject": { "reference": "urn:uuid:pat-882934", "display": "Sarah Al-Otaibi" },
+              "date": timestamp,
+              "author": [ { "display": "Dr. Mohammed, MD (Attending Physician)" } ],
+              "title": "Inpatient CAP Progress Note & Step-Down",
+              "attester": [
+                {
+                  "mode": "legal",
+                  "time": timestamp,
+                  "party": { "display": "Dr. Mohammed, Attending Physician" }
+                }
+              ],
+              "section": [
+                { "title": "Subjective", "text": { "status": "generated", "div": "<div>" + subj + "</div>" } },
+                { "title": "Objective", "text": { "status": "generated", "div": "<div>" + obj + "</div>" } },
+                { "title": "Assessment", "text": { "status": "generated", "div": "<div>" + assess + "</div>" } },
+                { "title": "Plan", "text": { "status": "generated", "div": "<div>" + plan + "</div>" } }
+              ]
+            }
+          },
+          {
+            "fullUrl": "urn:uuid:pat-882934",
+            "resource": {
+              "resourceType": "Patient",
+              "id": "pat-882934",
+              "identifier": [ { "system": "urn:hospital:mrn", "value": "882934" } ],
+              "active": true,
+              "name": [ { "use": "official", "family": "Al-Otaibi", "given": ["Sarah"] } ],
+              "gender": "female",
+              "birthDate": "1955-03-12"
+            }
+          },
+          {
+            "fullUrl": "urn:uuid:cond-cap",
+            "resource": {
+              "resourceType": "Condition",
+              "id": "cond-cap-882934",
+              "clinicalStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-clinical", "code": "active" }] },
+              "verificationStatus": { "coding": [{ "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status", "code": "confirmed" }] },
+              "code": {
+                "coding": [
+                  { "system": "http://hl7.org/fhir/sid/icd-10-cm", "code": "J18.9", "display": "Community-Acquired Pneumonia" }
+                ]
+              },
+              "subject": { "reference": "urn:uuid:pat-882934" }
+            }
+          },
+          {
+            "fullUrl": "urn:uuid:cond-aco",
+            "resource": {
+              "resourceType": "Condition",
+              "id": "cond-aco-882934",
+              "code": {
+                "coding": [
+                  { "system": "http://hl7.org/fhir/sid/icd-10-cm", "code": "J44.9", "display": "Chronic obstructive pulmonary disease, unspecified" },
+                  { "system": "http://hl7.org/fhir/sid/icd-10-cm", "code": "J45.30", "display": "Asthma-COPD Overlap (ACO)" }
+                ]
+              },
+              "subject": { "reference": "urn:uuid:pat-882934" }
+            }
+          },
+          {
+            "fullUrl": "urn:uuid:obs-wbc",
+            "resource": {
+              "resourceType": "Observation",
+              "id": "obs-wbc-882934",
+              "status": "final",
+              "code": {
+                "coding": [ { "system": "http://loinc.org", "code": "6690-1", "display": "Leukocytes [#/volume] in Blood" } ]
+              },
+              "valueQuantity": { "value": 8.2, "unit": "10*9/L", "system": "http://unitsofmeasure.org", "code": "10*9/L" },
+              "referenceRange": [ { "low": { "value": 4.0 }, "high": { "value": 11.0 } } ]
+            }
+          },
+          {
+            "fullUrl": "urn:uuid:obs-crp",
+            "resource": {
+              "resourceType": "Observation",
+              "id": "obs-crp-882934",
+              "status": "final",
+              "code": {
+                "coding": [ { "system": "http://loinc.org", "code": "1988-5", "display": "C reactive protein [Mass/volume] in Serum or Plasma" } ]
+              },
+              "valueQuantity": { "value": 6.5, "unit": "mg/L", "system": "http://unitsofmeasure.org", "code": "mg/L" }
+            }
+          },
+          {
+            "fullUrl": "urn:uuid:obs-procalcitonin",
+            "resource": {
+              "resourceType": "Observation",
+              "id": "obs-pct-882934",
+              "status": "final",
+              "code": {
+                "coding": [ { "system": "http://loinc.org", "code": "75241-0", "display": "Procalcitonin [Mass/volume] in Serum or Plasma" } ]
+              },
+              "valueQuantity": { "value": 0.11, "unit": "ng/mL", "system": "http://unitsofmeasure.org", "code": "ng/mL" }
+            }
+          },
+          {
+            "fullUrl": "urn:uuid:med-amox-clav",
+            "resource": {
+              "resourceType": "MedicationStatement",
+              "id": "med-amox-882934",
+              "status": "active",
+              "medicationCodeableConcept": {
+                "coding": [ { "system": "http://www.nlm.nih.gov/research/umls/rxnorm", "code": "866439", "display": "Amoxicillin 875 MG / Clavulanate Potassium 125 MG Oral Tablet" } ]
+              },
+              "dosage": [
+                {
+                  "text": "875/125mg PO BID x 5 days (to complete 7-day total course)"
+                }
+              ]
+            }
+          },
+          {
+            "fullUrl": "urn:uuid:provenance-882934",
+            "resource": {
+              "resourceType": "Provenance",
+              "id": "prov-882934",
+              "target": [ { "reference": "urn:uuid:composition-882934" } ],
+              "recorded": timestamp,
+              "reason": [ { "text": "Clinical Documentation Attestation & DocIQ Quality Audit" } ],
+              "activity": {
+                "coding": [ { "system": "http://terminology.hl7.org/CodeSystem/v3-DocumentCompletion", "code": "LA", "display": "legally authenticated" } ]
+              },
+              "agent": [
+                {
+                  "type": { "coding": [ { "system": "http://terminology.hl7.org/CodeSystem/provenance-participant-type", "code": "author" } ] },
+                  "who": { "display": "Dr. Mohammed, Attending Physician" }
+                }
+              ],
+              "signature": [
+                {
+                  "type": [ { "system": "urn:iso-astm:E1762-95:2013", "code": "1.2.840.10065.1.12.1.1", "display": "Author's Signature" } ],
+                  "when": timestamp,
+                  "who": { "display": "Dr. Mohammed, MD" },
+                  "sigFormat": "application/signature+xml",
+                  "data": "sha256-8f9b2a7d4fcbda879e61209b44c82e71fa01"
+                }
+              ]
+            }
+          }
+        ]
+      };
+    }
+
+    function openFhirModal() {
+      const bundle = generateFhirR4Bundle();
+      const pre = document.getElementById('fhirPreBlock');
+      if (pre) {
+        pre.innerText = JSON.stringify(bundle, null, 2);
+      }
+      openModal('fhirModal');
+    }
+
+    function copyFhirJson() {
+      const pre = document.getElementById('fhirPreBlock');
+      const text = pre ? pre.innerText : '';
+      navigator.clipboard.writeText(text).then(() => {
+        const btnText = document.getElementById('copyBtnText');
+        if (btnText) {
+          btnText.innerText = 'Copied ✓';
+          setTimeout(() => btnText.innerText = 'Copy JSON', 2000);
+        }
+        showToast('FHIR Copied', 'HL7 FHIR R4 Bundle copied to clipboard.', 'success');
+      });
+    }
+
+    function downloadFhir() {
+      const bundle = generateFhirR4Bundle();
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'fhir_r4_sarah_alotaibi.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('FHIR Downloaded', 'fhir_r4_sarah_alotaibi.json downloaded to your device.', 'success');
+    }
+
+    function navigateTo(step) {
+      currentStep = step;
+      for (let s = 1; s <= 7; s++) {
+        const screenEl = document.getElementById('screen-' + s);
+        if (screenEl) {
+          screenEl.classList.toggle('hidden', s !== step);
+        }
+        const btnEl = document.getElementById('stepBtn-' + s);
+        if (btnEl) {
+          const isActive = (s === step);
+          btnEl.className = isActive
+            ? 'w-full p-2.5 rounded-xl flex items-center gap-3 text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-soft'
+            : 'w-full p-2.5 rounded-xl flex items-center gap-3 text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
+        }
+      }
+
+      if (step === 7) {
+        updateFinalRecordDisplay();
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function filterQueue(dept) {
+      ['All', 'Internal Medicine', 'Cardiology', 'Surgery'].forEach(d => {
+        const btn = document.getElementById('filterBtn-' + d);
+        if (btn) {
+          btn.className = d === dept
+            ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-700 text-white shadow-soft transition-all'
+            : 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 transition-all';
+        }
+      });
+
+      document.querySelectorAll('.patient-card').forEach(card => {
+        const cardDept = card.getAttribute('data-dept');
+        card.style.display = (dept === 'All' || cardDept === dept) ? 'flex' : 'none';
+      });
+    }
+
+    function handleSearch(query) {
+      const q = query.toLowerCase();
+      document.querySelectorAll('.patient-card').forEach(card => {
+        const name = (card.getAttribute('data-name') || '').toLowerCase();
+        const mrn = (card.getAttribute('data-mrn') || '').toLowerCase();
+        const dept = (card.getAttribute('data-dept') || '').toLowerCase();
+        const match = name.includes(q) || mrn.includes(q) || dept.includes(q);
+        card.style.display = match ? 'flex' : 'none';
+      });
+    }
+
+    function acceptLabIngestion() {
+      isLabAccepted = true;
+      const objEl = document.getElementById('objectiveTextarea');
+      const labSnippet = "\n\n[Cerner LIS Biomarkers Aug 18]: WBC 8.2 x10^9/L (from 14.1), CRP 6.5 mg/L (from 45.0), Procalcitonin 0.11 ng/mL.";
+      if (!objEl.value.includes('WBC 8.2')) {
+        objEl.value += labSnippet;
+      }
+      objEl.classList.add('highlight-insert');
+      setTimeout(() => objEl.classList.remove('highlight-insert'), 1800);
+
+      const beforeBadge = document.getElementById('objBeforeBadge');
+      if (beforeBadge) beforeBadge.classList.add('hidden');
+      const afterBadge = document.getElementById('objAfterBadge');
+      if (afterBadge) {
+        afterBadge.classList.remove('hidden');
+        afterBadge.classList.add('flex');
+      }
+
+      document.getElementById('objectiveStatusBadge').innerText = 'LOINC MAPPED';
+      document.getElementById('objectiveStatusBadge').className = 'text-[10px] font-bold badge-emerald px-2 py-0.5 rounded';
+      document.getElementById('objKineticsText').innerText = 'Biomarker Kinetics Documented';
+      document.getElementById('objKineticsText').className = 'text-emerald-700 font-semibold';
+
+      appendClinicalAuditLog(
+        'EHR Ingest',
+        'LIS Biomarker Ingestion',
+        'LOINC / Cerner LIS',
+        'Ingested LOINC-mapped labs (WBC 8.2 x10^9/L, CRP 6.5 mg/L, Procalcitonin 0.11 ng/mL).'
+      );
+
+      handleDoctorInput();
+      showToast('Cerner LIS Injected (+10%)', 'WBC 8.2 & CRP 6.5 added to Objective. Score raised to 78%!', 'success');
+    }
+
+    function acceptAcoSpecificity() {
+      isAcoAccepted = true;
+      const assessEl = document.getElementById('assessmentTextarea');
+      assessEl.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO) - ICD-10 J44.9 / J45.30.\n3. Essential Hypertension - Blood pressure controlled.`;
+      assessEl.classList.add('highlight-insert');
+      setTimeout(() => assessEl.classList.remove('highlight-insert'), 1800);
+
+      const beforeBadge = document.getElementById('assessBeforeBadge');
+      if (beforeBadge) beforeBadge.classList.add('hidden');
+      const afterBadge = document.getElementById('assessAfterBadge');
+      if (afterBadge) {
+        afterBadge.classList.remove('hidden');
+        afterBadge.classList.add('flex');
+      }
+
+      document.getElementById('assessmentStatusBadge').innerText = 'ACO SPECIFIED (J44.9/J45.30)';
+      document.getElementById('assessmentStatusBadge').className = 'text-[10px] font-bold badge-emerald px-2 py-0.5 rounded';
+      document.getElementById('assessIcdText').innerText = 'ICD-10 Specificity Mapped';
+      document.getElementById('assessIcdText').className = 'text-emerald-700 font-semibold';
+
+      appendClinicalAuditLog(
+        'Diagnostic Refinement',
+        'Comorbidity Coding Specificity',
+        'Dr. Mohammed',
+        'Upgraded comorbidity to Asthma-COPD Overlap (ACO) ICD-10 J44.9/J45.30.'
+      );
+
+      handleDoctorInput();
+      showToast('ACO Specificity Added (+8%)', 'Assessment upgraded with J44.9 code. Score raised to 86%!', 'success');
+    }
+
+    function acceptStewardshipPlan() {
+      isPlanAccepted = true;
+      const planEl = document.getElementById('planTextarea');
+      planEl.value = `- Step-down to Oral Amox/Clav 875/125mg PO BID to complete 7-day course.\n- Discontinue supplemental oxygen; patient stable at 98% room air.\n- Resume home Losartan 50mg daily and Ipratropium/Albuterol MDI.\n- Discharge planning for tomorrow with outpatient pulmonary clinic follow-up in 7 days.`;
+      planEl.classList.add('highlight-insert');
+      setTimeout(() => planEl.classList.remove('highlight-insert'), 1800);
+
+      const beforeBadge = document.getElementById('planBeforeBadge');
+      if (beforeBadge) beforeBadge.classList.add('hidden');
+      const afterBadge = document.getElementById('planAfterBadge');
+      if (afterBadge) {
+        afterBadge.classList.remove('hidden');
+        afterBadge.classList.add('flex');
+      }
+
+      document.getElementById('planStatusBadge').innerText = 'ATS/IDSA COMPLIANT';
+      document.getElementById('planStatusBadge').className = 'text-[10px] font-bold badge-emerald px-2 py-0.5 rounded';
+      document.getElementById('planDurationText').innerText = '7-Day Target Verified';
+      document.getElementById('planDurationText').className = 'text-emerald-700 font-semibold';
+
+      appendClinicalAuditLog(
+        'Clinical Guideline Action',
+        'Antimicrobial Stewardship Acceptance',
+        'Dr. Mohammed',
+        'Applied ATS/IDSA 7-day oral step-down regimen (Amoxicillin/Clavulanate 875/125mg PO BID).'
+      );
+
+      handleDoctorInput();
+      showToast('7-Day Plan Applied (+6%)', 'Stewardship step-down protocol applied. Score reached 92% (Compliant)!', 'success');
+    }
+
+    function resetToRawDraft() {
+      isLabAccepted = false;
+      isAcoAccepted = false;
+      isPlanAccepted = false;
+      isRecordSigned = false;
+
+      document.getElementById('subjectiveTextarea').value = `71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.`;
+      document.getElementById('objectiveTextarea').value = `Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\nPhysical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.`;
+      document.getElementById('assessmentTextarea').value = `1. Community-Acquired Pneumonia (CAP) - Improving.\n2. Mild Asthma - Stable.\n3. Hypertension - Controlled.`;
+      document.getElementById('planTextarea').value = `- Continue IV antibiotics and supportive respiratory care.\n- Monitor vitals.\n- Plan discharge when clinically ready.`;
+
+      const objBefore = document.getElementById('objBeforeBadge');
+      if (objBefore) { objBefore.classList.remove('hidden'); objBefore.classList.add('flex'); }
+      const objAfter = document.getElementById('objAfterBadge');
+      if (objAfter) { objAfter.classList.add('hidden'); objAfter.classList.remove('flex'); }
+
+      const assessBefore = document.getElementById('assessBeforeBadge');
+      if (assessBefore) { assessBefore.classList.remove('hidden'); assessBefore.classList.add('flex'); }
+      const assessAfter = document.getElementById('assessAfterBadge');
+      if (assessAfter) { assessAfter.classList.add('hidden'); assessAfter.classList.remove('flex'); }
+
+      const planBefore = document.getElementById('planBeforeBadge');
+      if (planBefore) { planBefore.classList.remove('hidden'); planBefore.classList.add('flex'); }
+      const planAfter = document.getElementById('planAfterBadge');
+      if (planAfter) { planAfter.classList.add('hidden'); planAfter.classList.remove('flex'); }
+
+      document.getElementById('objectiveStatusBadge').innerText = 'LIS Biomarkers Pending';
+      document.getElementById('objectiveStatusBadge').className = 'text-[10px] font-bold badge-amber px-2 py-0.5 rounded';
+      document.getElementById('objKineticsText').innerText = 'Click [+ Insert] to raise score to 78%';
+      document.getElementById('objKineticsText').className = 'text-amber-700 font-semibold';
+
+      document.getElementById('assessmentStatusBadge').innerText = 'ACO Specificity Needed';
+      document.getElementById('assessmentStatusBadge').className = 'text-[10px] font-bold badge-amber px-2 py-0.5 rounded';
+      document.getElementById('assessIcdText').innerText = 'Click [+ Clarify] to raise score to 86%';
+      document.getElementById('assessIcdText').className = 'text-teal-700 font-semibold';
+
+      document.getElementById('planStatusBadge').innerText = 'Duration Vague';
+      document.getElementById('planStatusBadge').className = 'text-[10px] font-bold badge-amber px-2 py-0.5 rounded';
+      document.getElementById('planDurationText').innerText = 'Click [+ Apply] to reach 92% (Compliant)';
+      document.getElementById('planDurationText').className = 'text-amber-700 font-semibold';
+
+      // Reset Step 7 UI
+      const saveBtn = document.getElementById('saveFinalBtn');
+      if (saveBtn) {
+        saveBtn.innerHTML = '<span>Save Final Record in EHR ✓</span>';
+        saveBtn.className = 'px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-soft flex items-center gap-2 transition-all cursor-pointer hover:scale-105 active:scale-95';
+      }
+      const badge = document.getElementById('finalRecordStatusBadge');
+      if (badge) {
+        badge.innerText = 'Draft (Unsigned)';
+        badge.className = 'px-2 py-0.5 rounded text-xs font-bold badge-amber';
+      }
+      const provTag = document.getElementById('provenanceVerifiedTag');
+      if (provTag) {
+        provTag.innerText = 'Unsigned Draft';
+        provTag.className = 'px-2 py-0.2 rounded bg-slate-100 text-slate-700 text-[10px] font-bold';
+      }
+
+      handleDoctorInput();
+      showToast('Reset to Raw Draft (68%)', 'Baseline un-optimized draft loaded.', 'info');
+    }
+
+    function quickFillOptimalNote() {
+      acceptLabIngestion();
+      acceptAcoSpecificity();
+      acceptStewardshipPlan();
+      showToast('Quick-Fill Applied', 'All 3 AI optimizations accepted. Score elevated to 92%!', 'success');
+    }
+
+    let typingDebounceTimer = null;
+
+    
+    function updateQualityGauge(score) {
+      const clampedScore = Math.min(Math.max(Number(score) || 68, 0), 100);
+      const radius = 38;
+      const circumference = 2 * Math.PI * radius; // ~238.76
+      const strokeDashoffset = circumference - (clampedScore / 100) * circumference;
+
+      // Dynamic colors: <75% Amber, 75-89% Teal, >=90% Emerald
+      const isCompliant = clampedScore >= 90;
+      const isReview = clampedScore >= 75 && clampedScore < 90;
+
+      const activeColor = isCompliant ? "#059669" : isReview ? "#0D9488" : "#D97706";
+      const statusLabel = isCompliant ? "COMPLIANT" : isReview ? "IN REVIEW" : "DEFICIENT";
+      const badgeStyle = isCompliant ? "badge-emerald" : isReview ? "badge-teal" : "badge-amber";
+
+      const arc = document.getElementById("gaugeSvgArc");
+      if (arc) {
+        arc.style.strokeDashoffset = strokeDashoffset;
+        arc.setAttribute("stroke", activeColor);
+      }
+
+      const numEl = document.getElementById("aiGaugeNumber");
+      if (numEl) {
+        numEl.innerText = Math.round(clampedScore) + "%";
+        numEl.style.color = activeColor;
+      }
+
+      const subEl = document.getElementById("gaugeSubLabel");
+      if (subEl) {
+        subEl.innerText = statusLabel;
+        subEl.style.color = activeColor;
+      }
+
+      const aiScoreBadge = document.getElementById("aiScoreBadge");
+      if (aiScoreBadge) {
+        aiScoreBadge.innerText = Math.round(clampedScore) + "% (" + (isCompliant ? "Excellent / Compliant" : isReview ? "Action Required" : "Needs Attention") + ")";
+        aiScoreBadge.className = "px-2 py-0.5 rounded text-xs font-bold " + badgeStyle;
+      }
+    }
+
+    function handleDoctorInput(sectionChanged) {
+      if (sectionChanged) {
+        clearTimeout(typingDebounceTimer);
+        typingDebounceTimer = setTimeout(() => {
+          appendClinicalAuditLog(
+            'Clinician Modification',
+            'Doctor Note Edited',
+            'Dr. Mohammed',
+            `Dr. Mohammed edited ${sectionChanged} content.`
+          );
+        }, 2000);
+      }
+
+      const subj = document.getElementById('subjectiveTextarea').value;
+      const obj = document.getElementById('objectiveTextarea').value;
+      const assess = document.getElementById('assessmentTextarea').value;
+      const plan = document.getElementById('planTextarea').value;
+
+      const hasWbc = obj.toLowerCase().includes('wbc') || obj.toLowerCase().includes('8.2');
+      const hasCrp = obj.toLowerCase().includes('crp') || obj.toLowerCase().includes('6.5');
+      const hasVitalsBp = obj.toLowerCase().includes('bp') || obj.includes('118/74');
+      const hasVitalsTemp = obj.toLowerCase().includes('temp') || obj.includes('37.1');
+      const hasVitalsSpo2 = obj.toLowerCase().includes('spo2') || obj.includes('98%');
+
+      const note = {
+        patientId: '882934',
+        age: 71,
+        chiefComplaint: 'Productive cough and pleuritic chest pain',
+        hpi: subj.trim(),
+        ros: 'Negative for chills, fever resolved',
+        medications: ['Ceftriaxone IV', 'Losartan 50mg', 'Albuterol MDI'],
+        allergies: 'NKDA',
+        physicalExam: obj.trim(),
+        vitals: (hasVitalsBp && hasVitalsTemp && hasVitalsSpo2 && obj.length > 20) ? { bp: '118/74', temp: 37.1, spo2: 98 } : null,
+        labs: (hasWbc && hasCrp) ? { wbc: 8.2, crp: 6.5 } : null,
+        diagnosisCode: assess.toLowerCase().includes('j44') ? 'J44.9 / J45.30' : (assess.length > 10 ? 'J18.9' : ''),
+        plan: plan.trim()
+      };
+
+      const res = evaluateClinicalNote(note);
+      const score = res.qualityScore;
+      const resScore = res.researchScore;
+
+      document.getElementById('subjCounter').innerText = `Character count: ${subj.length} | Matched CAP Elements: ${res.completedItems}/11`;
+      document.getElementById('objCounter').innerText = `Character count: ${obj.length} | Matched CAP Elements: ${res.completedItems}/11`;
+      document.getElementById('assessCounter').innerText = `Character count: ${assess.length} | Matched CAP Elements: ${res.completedItems}/11`;
+      document.getElementById('planCounter').innerText = `Character count: ${plan.length} | Matched CAP Elements: ${res.completedItems}/11`;
+
+      const totalWords = (subj + ' ' + obj + ' ' + assess + ' ' + plan).trim().split(/\s+/).filter(Boolean).length;
+      const totalChars = subj.length + obj.length + assess.length + plan.length;
+      document.getElementById('wordCountDisplay').innerText = `Words: ${totalWords} • Characters: ${totalChars.toLocaleString()}`;
+
+      const aiScoreBadge = document.getElementById('aiScoreBadge');
+      const gaugeCircle = document.getElementById('gaugeCircleBorder');
+      const gaugeSub = document.getElementById('gaugeSubLabel');
+
+      if (aiScoreBadge) {
+        if (score >= 90) {
+          aiScoreBadge.innerText = `${score}% (Excellent / Compliant)`;
+          aiScoreBadge.className = 'px-2 py-0.5 rounded text-xs font-bold badge-emerald';
+          if (gaugeCircle) gaugeCircle.className = 'w-20 h-20 rounded-full bg-emerald-50 border-8 border-emerald-600 flex flex-col items-center justify-center shrink-0 shadow-soft transition-all duration-500';
+          if (gaugeSub) { gaugeSub.innerText = 'COMPLIANT'; gaugeSub.className = 'text-[9px] font-bold text-emerald-700'; }
+        } else if (score >= 78) {
+          aiScoreBadge.innerText = `${score}% (Action Required)`;
+          aiScoreBadge.className = 'px-2 py-0.5 rounded text-xs font-bold badge-teal';
+          if (gaugeCircle) gaugeCircle.className = 'w-20 h-20 rounded-full bg-teal-50 border-8 border-teal-700 flex flex-col items-center justify-center shrink-0 shadow-soft transition-all duration-500';
+          if (gaugeSub) { gaugeSub.innerText = 'QUALITY'; gaugeSub.className = 'text-[9px] font-bold text-teal-700'; }
+        } else {
+          aiScoreBadge.innerText = `${score}% (Needs Attention)`;
+          aiScoreBadge.className = 'px-2 py-0.5 rounded text-xs font-bold badge-amber';
+          if (gaugeCircle) gaugeCircle.className = 'w-20 h-20 rounded-full bg-amber-50 border-8 border-amber-500 flex flex-col items-center justify-center shrink-0 shadow-soft transition-all duration-500';
+          if (gaugeSub) { gaugeSub.innerText = 'DEFICIENT'; gaugeSub.className = 'text-[9px] font-bold text-amber-700'; }
+        }
+      }
+
+      const aiGaugeNum = document.getElementById('aiGaugeNumber');
+      if (aiGaugeNum) {
+        aiGaugeNum.innerText = `${score}%`;
+        aiGaugeNum.className = score >= 90 ? 'text-2xl font-extrabold text-emerald-800' : (score >= 78 ? 'text-2xl font-extrabold text-teal-800' : 'text-2xl font-extrabold text-amber-800');
+      }
+
+      document.getElementById('weightCompleteness').innerText = `${res.completenessWeight.toFixed(2)} pts (${res.completedItems}/11 items)`;
+      document.getElementById('weightClarity').innerText = `${res.clarityWeight.toFixed(2)} pts`;
+      document.getElementById('weightConsistency').innerText = `${res.consistencyWeight.toFixed(2)} pts`;
+      document.getElementById('weightOrg').innerText = `${res.organizationWeight.toFixed(2)} pts`;
+
+      const qScore = document.getElementById('queueDocScore-1');
+      if (qScore) qScore.innerText = `${score}%`;
+      const qBar = document.getElementById('queueDocBar-1');
+      if (qBar) {
+        qBar.style.width = `${score}%`;
+        qBar.className = score >= 90 ? 'h-full bg-emerald-600' : (score >= 78 ? 'h-full bg-teal-700' : 'h-full bg-amber-500');
+      }
+
+      const qResScore = document.getElementById('queueResearchScore-1');
+      if (qResScore) qResScore.innerText = `${resScore}%`;
+      const qResBar = document.getElementById('queueResearchBar-1');
+      if (qResBar) qResBar.style.width = `${resScore}%`;
+
+      const qBadge = document.getElementById('queuePatientBadge-1');
+      if (qBadge) {
+        qBadge.innerText = score >= 90 ? 'Compliant ✓' : `Action Required (${score}%)`;
+        qBadge.className = score >= 90 ? 'px-2 py-0.5 rounded text-[10px] font-bold badge-emerald' : 'px-2 py-0.5 rounded text-[10px] font-bold badge-amber';
+      }
+
+      const alertBox = document.getElementById('alertsContainer');
+      const alertMsg = document.getElementById('alertsMessage');
+      const gapsBadge = document.getElementById('gapsCountBadge');
+
+      const missingGaps = [];
+      if (!res.checklist.biomarkers) missingGaps.push('• <strong>Objective:</strong> Inflammatory kinetics (WBC & CRP) missing from progress note.');
+      if (!res.checklist.diagnosisSpecific) missingGaps.push('• <strong>Assessment:</strong> Asthma-COPD Overlap specificity unstated (needed for RWE registry).');
+      if (!res.checklist.stewardshipPlan) missingGaps.push('• <strong>Plan:</strong> Oral step-down dosing target (7-day course) unquantified.');
+      if (!res.checklist.vitals) missingGaps.push('• <strong>Vitals:</strong> Full 4 vital parameters required.');
+
+      if (missingGaps.length === 0 || score >= 90) {
+        alertBox.className = 'card-hospital p-5 space-y-3 bg-emerald-50/40 border-emerald-200 transition-all';
+        gapsBadge.innerText = 'All Compliant ✓';
+        gapsBadge.className = 'text-[10px] font-bold badge-emerald px-2 py-0.5 rounded';
+        alertMsg.className = 'text-xs text-emerald-900 font-medium leading-relaxed';
+        alertMsg.innerText = '✓ All 11 CAP checklist items verified. LOINC biomarkers, ACO specificity, and stewardship duration complete.';
+      } else {
+        alertBox.className = 'card-hospital p-5 space-y-3 bg-amber-50/70 border-amber-300 transition-all';
+        gapsBadge.innerText = `${missingGaps.length} Actions Pending`;
+        gapsBadge.className = 'text-[10px] font-bold badge-amber px-2 py-0.5 rounded';
+        alertMsg.className = 'text-xs text-amber-900 font-medium leading-relaxed space-y-1';
+        alertMsg.innerHTML = missingGaps.join('');
+      }
+
+      const ckSummary = document.getElementById('ckSummaryText');
+      if (ckSummary) ckSummary.innerText = `${res.completedItems} / 11 Completed (${Math.round(res.completenessRatio * 100)}%)`;
+      const ckBar = document.getElementById('ckSummaryBar');
+      if (ckBar) {
+        ckBar.style.width = `${Math.round(res.completenessRatio * 100)}%`;
+        ckBar.className = res.completedItems >= 10 ? 'h-full bg-emerald-600' : 'h-full bg-amber-500';
+      }
+
+      renderChecklistGrid(res.checklist);
+
+      const dualQualBadge = document.getElementById('dualScoreQualBadge');
+      const dualQualNum = document.getElementById('dualQualScoreNum');
+      const dualQualSvgArc = document.getElementById('dualQualSvgArc');
+      const formulaText = document.getElementById('dualQualFormulaText');
+
+      const isQualCompliant = score >= 90;
+      const isQualReview = score >= 75 && score < 90;
+      const qualColor = isQualCompliant ? "#059669" : isQualReview ? "#0D9488" : "#D97706";
+      const qualOffset = 238.76 - (score / 100) * 238.76;
+
+      if (dualQualSvgArc) {
+        dualQualSvgArc.style.strokeDashoffset = qualOffset;
+        dualQualSvgArc.setAttribute('stroke', qualColor);
+      }
+      if (dualQualNum) {
+        dualQualNum.innerText = `${score}%`;
+        dualQualNum.style.color = qualColor;
+      }
+      if (dualQualBadge) {
+        if (score >= 90) {
+          dualQualBadge.innerText = `${score}% - Excellent`;
+          dualQualBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold badge-emerald';
+        } else if (score >= 75) {
+          dualQualBadge.innerText = `${score}% - Good / In Review`;
+          dualQualBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold badge-teal';
+        } else {
+          dualQualBadge.innerText = `${score}% - Action Required`;
+          dualQualBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold badge-amber';
+        }
+      }
+      if (formulaText) {
+        formulaText.innerHTML = `${res.completenessWeight.toFixed(2)} + ${res.clarityWeight.toFixed(2)} + ${res.consistencyWeight.toFixed(2)} + ${res.organizationWeight.toFixed(2)} = <strong>${(res.completenessWeight+res.clarityWeight+res.consistencyWeight+res.organizationWeight).toFixed(2)} → ${score}%</strong>`;
+      }
+
+      const dualResBadge = document.getElementById('dualScoreResBadge');
+      const dualResNum = document.getElementById('dualResScoreNum');
+      const dualResSvgArc = document.getElementById('dualResSvgArc');
+      const formulaResText = document.getElementById('dualResFormulaText');
+
+      const isResCompliant = resScore >= 85;
+      const isResReview = resScore >= 75 && resScore < 85;
+      const resColor = isResCompliant ? "#059669" : isResReview ? "#0D9488" : "#D97706";
+      const resOffset = 238.76 - (resScore / 100) * 238.76;
+
+      if (dualResSvgArc) {
+        dualResSvgArc.style.strokeDashoffset = resOffset;
+        dualResSvgArc.setAttribute('stroke', resColor);
+      }
+      if (dualResNum) {
+        dualResNum.innerText = `${resScore}%`;
+        dualResNum.style.color = resColor;
+      }
+      if (dualResBadge) {
+        if (resScore >= 85) {
+          dualResBadge.innerText = `${resScore}% - Very Good`;
+          dualResBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold badge-emerald';
+        } else if (resScore >= 75) {
+          dualResBadge.innerText = `${resScore}% - Good`;
+          dualResBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold badge-teal';
+        } else {
+          dualResBadge.innerText = `${resScore}% - Needs Enrichment`;
+          dualResBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold badge-amber';
+        }
+      }% - Very Good`;
+          dualResBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold badge-emerald';
+        } else if (resScore >= 75) {
+          dualResBadge.innerText = `${resScore}% - Good`;
+          dualResBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold badge-teal';
+        } else {
+          dualResBadge.innerText = `${resScore}% - Needs Enrichment`;
+          dualResBadge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold badge-amber';
+        }
+      }
+      if (formulaResText) {
+        formulaResText.innerHTML = `${res.keyVariablesWeight.toFixed(2)} + ${res.dataCompletenessWeight.toFixed(2)} + ${res.structuredDocWeight.toFixed(2)} + ${res.dataConsistencyWeight.toFixed(2)} = <strong>${(res.keyVariablesWeight+res.dataCompletenessWeight+res.structuredDocWeight+res.dataConsistencyWeight).toFixed(2)} → ${resScore}%</strong>`;
+      }
+
+      updateFinalRecordDisplay();
+
+      const autoSave = document.getElementById('autoSaveIndicator');
+      if (autoSave) {
+        autoSave.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span><span>Saved just now • EHR Cache</span>';
+        setTimeout(() => {
+          autoSave.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>Auto-Saved • EHR Cache</span>';
+        }, 1200);
+      }
+    }
+
+    function handleProceedStep4() {
+      const qScore = parseInt(document.getElementById('aiGaugeNumber').innerText) || 68;
+      if (qScore < 80) {
+        showToast('Clinical Notice', 'Note is currently at ' + qScore + '%. We recommend resolving pending action items before finalizing.', 'info');
+      }
+      navigateTo(4);
+    }
+
+    function renderChecklistGrid(ck) {
+      const grid = document.getElementById('checklistDetailedList');
+      if (!grid) return;
+
+      const items = [
+        { label: '1. Patient Demographics & Age', ok: ck.demographics, desc: 'Validated with EHR Registry (Sarah Al-Otaibi, 71y, MRN 882934).' },
+        { label: '2. Chief Complaint', ok: ck.chiefComplaint, desc: 'Documented pleuritic chest pain & productive cough.' },
+        { label: '3. History of Present Illness (HPI)', ok: ck.hpi, desc: 'Day 3 interval symptom review & resolution trajectory.' },
+        { label: '4. Review of Systems (ROS)', ok: ck.ros, desc: 'Negative for chills, fever resolved >24h.' },
+        { label: '5. Inpatient Active Medications', ok: ck.medications, desc: 'IV Ceftriaxone, Losartan 50mg, Albuterol.' },
+        { label: '6. Allergy Assessment', ok: ck.allergies, desc: 'No Known Drug Allergies (NKDA) confirmed.' },
+        { label: '7. Physical Exam & Lung Sounds', ok: ck.physicalExam, desc: 'Light end-inspiratory crackles RLL documented.' },
+        { label: '8. Bedside Vitals Telemetry', ok: ck.vitals, desc: 'BP 118/74, Temp 37.1 C, HR 78, SpO2 98% room air.' },
+        { label: '9. Inflammatory Biomarkers (WBC / CRP)', ok: ck.biomarkers, desc: 'Cerner LIS LOINC WBC 8.2 x10^9/L & CRP 6.5 mg/L.' },
+        { label: '10. Comorbidity Specificity (ACO J44.9)', ok: ck.diagnosisSpecific, desc: 'Asthma-COPD Overlap ICD-10 precision.' },
+        { label: '11. Antimicrobial Stewardship Plan', ok: ck.stewardshipPlan, desc: 'Oral Amoxicillin-Clavulanate 875/125mg BID 7-day target.' }
+      ];
+
+      grid.innerHTML = items.map(item => `
+        <div class="card-hospital p-4 space-y-1 border-l-4 ${item.ok ? 'border-l-emerald-600 bg-emerald-50/30' : 'border-l-amber-500 bg-amber-50/30'}">
+          <div class="flex justify-between items-start">
+            <span class="text-xs font-bold ${item.ok ? 'text-slate-900' : 'text-amber-900'}">${item.label}</span>
+            <span class="px-2 py-0.5 rounded ${item.ok ? 'badge-emerald' : 'badge-amber'} text-[10px] font-bold">
+              ${item.ok ? 'Compliant ✓' : 'Action Required'}
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-600 leading-relaxed">${item.desc}</p>
+        </div>
+      `).join('');
+    }
+
+    function insertMacro(type) {
+      const objEl = document.getElementById('objectiveTextarea');
+      const assessEl = document.getElementById('assessmentTextarea');
+      const planEl = document.getElementById('planTextarea');
+
+      if (type === '.vitals') {
+        objEl.value += "\n[Vitals @ 15:30]: BP: 118/74, HR: 78, Temp: 37.1 C, SpO2: 98% RA.";
+        appendClinicalAuditLog('Clinician Modification', 'Macro Inserted', 'Dr. Mohammed', 'Appended vital telemetry macro (.vitals) to Objective.');
+      } else if (type === '.labs') {
+        acceptLabIngestion();
+      } else if (type === '.curb65') {
+        assessEl.value += "\n[Severity]: CURB-65 = 1 (Age > 65), Moderate Inpatient Ward Cleared.";
+        appendClinicalAuditLog('Clinician Modification', 'Macro Inserted', 'Dr. Mohammed', 'Appended severity assessment macro (.curb65) to Assessment.');
+      } else if (type === '.stewardship') {
+        acceptStewardshipPlan();
+      }
+      handleDoctorInput();
+      showToast('Macro Appended', `Inserted ${type} into note.`, 'info');
+    }
+
+    function updateFinalRecordDisplay() {
+      const subj = document.getElementById('subjectiveTextarea') ? document.getElementById('subjectiveTextarea').value : '';
+      const obj = document.getElementById('objectiveTextarea') ? document.getElementById('objectiveTextarea').value : '';
+      const assess = document.getElementById('assessmentTextarea') ? document.getElementById('assessmentTextarea').value : '';
+      const plan = document.getElementById('planTextarea') ? document.getElementById('planTextarea').value : '';
+
+      const finalSubj = document.getElementById('finalSubjective');
+      if (finalSubj) finalSubj.innerText = subj;
+
+      const finalObj = document.getElementById('finalObjective');
+      if (finalObj) finalObj.innerText = obj;
+
+      const finalAssess = document.getElementById('finalAssessment');
+      if (finalAssess) finalAssess.innerText = assess;
+
+      const finalPlan = document.getElementById('finalPlan');
+      if (finalPlan) finalPlan.innerText = plan;
+
+      // Update Warning / Verified Banners based on live score
+      const currentScore = parseInt(document.getElementById('aiGaugeNumber').innerText) || 68;
+      const warnBanner = document.getElementById('step7OverrideWarningBanner');
+      const verBanner = document.getElementById('step7VerifiedBanner');
+
+      if (currentScore >= 90) {
+        if (warnBanner) warnBanner.classList.add('hidden');
+        if (verBanner) { verBanner.classList.remove('hidden'); verBanner.classList.add('flex'); }
+      } else {
+        if (verBanner) verBanner.classList.add('hidden');
+        if (warnBanner) { warnBanner.classList.remove('hidden'); warnBanner.classList.add('flex'); }
+      }
+    }
+
+    // ==============================================================
+    // UNRESTRICTED CLINICIAN OVERRIDE SAVE FINAL RECORD FLOW
+    // ==============================================================
+    function saveFinalRecord() {
+      isRecordSigned = true;
+      const currentScore = parseInt(document.getElementById('aiGaugeNumber').innerText) || 68;
+      const saveBtn = document.getElementById('saveFinalBtn');
+      const badge = document.getElementById('finalRecordStatusBadge');
+      const provTag = document.getElementById('provenanceVerifiedTag');
+
+      if (currentScore < 90) {
+        // Clinician Override Flow (< 90%)
+        if (saveBtn) {
+          saveBtn.innerHTML = '<span>Record Signed (Clinician Override) ✓</span>';
+          saveBtn.className = 'px-5 py-2.5 bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs rounded-xl shadow-soft cursor-default transition-all';
+        }
+        if (badge) {
+          badge.innerText = 'Version 1.0 (Signed with Override / Non-Compliant)';
+          badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold badge-amber';
+        }
+        if (provTag) {
+          provTag.innerText = `Clinician Override (${currentScore}%)`;
+          provTag.className = 'px-2 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-bold';
+        }
+
+        appendClinicalAuditLog(
+          'Clinician Override',
+          'Clinician Override Finalization',
+          'Dr. Mohammed',
+          `Dr. Mohammed finalized encounter note with open documentation gaps (Quality Score: ${currentScore}%).`
+        );
+
+        showToast('RECORD FINALIZED', `Record Finalized (Clinician Override - Quality Score: ${currentScore}%). Logged in Audit Trail.`, 'info');
+      } else {
+        // Fully Verified Compliant Flow (>= 90%)
+        if (saveBtn) {
+          saveBtn.innerHTML = '<span>Record Signed & Verified in EHR ✓</span>';
+          saveBtn.className = 'px-5 py-2.5 bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-soft cursor-default transition-all';
+        }
+        if (badge) {
+          badge.innerText = 'Version 1.3 (Signed & Verified)';
+          badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold badge-emerald';
+        }
+        if (provTag) {
+          provTag.innerText = `Verified & Compliant (${currentScore}%)`;
+          provTag.className = 'px-2 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold';
+        }
+
+        appendClinicalAuditLog(
+          'Security',
+          'Cryptographic Attestation',
+          'Dr. Mohammed',
+          `Record finalized and digitally stamped (Quality: ${currentScore}%, SHA-256 Hash: sha256-8f9b2a7d4fcbda879e61209b44c82e71fa01) by Dr. Mohammed.`
+        );
+
+        showToast('RECORD FINALIZED', `Record Finalized & Verified (Quality Score: ${currentScore}% - Fully Compliant).`, 'success');
+      }
+    }
+
+    function openModal(id) { 
+      if (id === 'auditModal') {
+        renderAuditLogs();
+      }
+      document.getElementById(id).classList.remove('hidden'); 
+    }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function showToast(title, msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = `p-4 rounded-2xl border shadow-soft-md fade-in flex items-start justify-between gap-3 ${type === 'success' ? 'bg-emerald-900 text-white border-emerald-700' : 'bg-slate-900 text-white border-slate-700'}`;
+      toast.innerHTML = `
+        <div>
+          <div class="font-bold text-xs">${title}</div>
+          <div class="text-[11px] opacity-90">${msg}</div>
+        </div>
+        <button onclick="this.parentElement.remove()" class="opacity-70 hover:opacity-100 text-xs">✕</button>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => { if (toast.parentElement) toast.remove(); }, 4000);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderAuditLogs();
+      resetToRawDraft();
+    });
+  
+</script>
+</body>
+</html>
