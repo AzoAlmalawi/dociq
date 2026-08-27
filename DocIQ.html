@@ -1397,7 +1397,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
   <!-- JAVASCRIPT LOGIC -->
   <script>
     // ==============================================================
-    // 1. GLOBAL STATE & BULLETPROOF ROUTER
+    // 1. GLOBAL REACTIVE STATE ARCHITECTURE
     // ==============================================================
     window.clinicalState = {
       appliedLabs: false,
@@ -1612,52 +1612,63 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
           : '<span class="font-medium text-amber-900">7-Day Stewardship Target</span><span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Action Pending</span>';
       }
 
-      // Update Action Banners & Badges
+      // DOM-Level Banner Toggle (Labs)
+      const bLabsAmber = document.getElementById('bannerLabsAmber');
+      const bLabsGreen = document.getElementById('bannerLabsGreen');
+      const bObj = document.getElementById('badgeObjectiveStatus');
       if (window.clinicalState.appliedLabs) {
-        const bannerL = document.getElementById('bannerLabs');
-        if (bannerL) bannerL.className = 'p-3.5 rounded-xl border border-emerald-300 bg-emerald-50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
-        const btnL = document.getElementById('btnInsertLabs');
-        if (btnL) {
-          btnL.innerHTML = '<span>INGESTED ✓ LOINC Biomarkers: WBC 8.2 x10^9/L, CRP 6.5 mg/L, Procalcitonin 0.11 ng/mL</span>';
-          btnL.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default shrink-0';
-          btnL.onclick = null;
-        }
-        const bObj = document.getElementById('badgeObjectiveStatus');
+        if (bLabsAmber) bLabsAmber.style.display = 'none';
+        if (bLabsGreen) bLabsGreen.style.display = 'flex';
         if (bObj) {
           bObj.innerText = 'LOINC Labs Ingested';
           bObj.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200';
         }
+      } else {
+        if (bLabsAmber) bLabsAmber.style.display = 'flex';
+        if (bLabsGreen) bLabsGreen.style.display = 'none';
+        if (bObj) {
+          bObj.innerText = 'Pending Labs';
+          bObj.className = 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200';
+        }
       }
 
+      // DOM-Level Banner Toggle (ACO)
+      const bAcoAmber = document.getElementById('bannerAcoAmber');
+      const bAcoGreen = document.getElementById('bannerAcoGreen');
+      const bAssess = document.getElementById('badgeAssessmentStatus');
       if (window.clinicalState.appliedAco) {
-        const bannerA = document.getElementById('bannerAco');
-        if (bannerA) bannerA.className = 'p-3.5 rounded-xl border border-emerald-300 bg-emerald-50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
-        const btnA = document.getElementById('btnClarifyAco');
-        if (btnA) {
-          btnA.innerHTML = '<span>OPTIMIZED ✓ Asthma-COPD Overlap (ACO) - ICD-10 J44.9 / J45.30 Specified</span>';
-          btnA.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default shrink-0';
-          btnA.onclick = null;
-        }
-        const bAssess = document.getElementById('badgeAssessmentStatus');
+        if (bAcoAmber) bAcoAmber.style.display = 'none';
+        if (bAcoGreen) bAcoGreen.style.display = 'flex';
         if (bAssess) {
           bAssess.innerText = 'ACO Specified';
           bAssess.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200';
         }
+      } else {
+        if (bAcoAmber) bAcoAmber.style.display = 'flex';
+        if (bAcoGreen) bAcoGreen.style.display = 'none';
+        if (bAssess) {
+          bAssess.innerText = 'Needs Specificity';
+          bAssess.className = 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200';
+        }
       }
 
+      // DOM-Level Banner Toggle (Plan)
+      const bPlanAmber = document.getElementById('bannerPlanAmber');
+      const bPlanGreen = document.getElementById('bannerPlanGreen');
+      const bPlan = document.getElementById('badgePlanStatus');
       if (window.clinicalState.appliedPlan) {
-        const bannerP = document.getElementById('bannerPlan');
-        if (bannerP) bannerP.className = 'p-3.5 rounded-xl border border-emerald-300 bg-emerald-50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
-        const btnP = document.getElementById('btnApplyPlan');
-        if (btnP) {
-          btnP.innerHTML = '<span>VERIFIED ✓ ATS/IDSA 7-Day Stewardship Target Met</span>';
-          btnP.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default shrink-0';
-          btnP.onclick = null;
-        }
-        const bPlan = document.getElementById('badgePlanStatus');
+        if (bPlanAmber) bPlanAmber.style.display = 'none';
+        if (bPlanGreen) bPlanGreen.style.display = 'flex';
         if (bPlan) {
           bPlan.innerText = '7-Day Plan Set';
           bPlan.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200';
+        }
+      } else {
+        if (bPlanAmber) bPlanAmber.style.display = 'flex';
+        if (bPlanGreen) bPlanGreen.style.display = 'none';
+        if (bPlan) {
+          bPlan.innerText = 'Unspecified Duration';
+          bPlan.className = 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200';
         }
       }
     };
@@ -1767,7 +1778,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     window.handleInsertLabs = function() {
       const objText = document.getElementById('soapObjectiveText');
       if (objText) {
-        const labText = "[Cerner LIS Biomarkers Aug 18: WBC 8.2 x10^9/L (from 14.1), CRP 6.5 mg/L (from 45.0), Procalcitonin 0.11 ng/mL]";
+        const labText = "[Cerner LIS Biomarkers Aug 18: WBC 8.2 x10^9/L (from 14.1), CRP 6.5 mg/L (from 45.0, 85% reduction), Procalcitonin 0.11 ng/mL]";
         if (!objText.value.includes(labText)) {
           objText.value = objText.value.trim() + "\n\n" + labText;
         }
@@ -1784,7 +1795,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     window.handleClarifyAco = function() {
       const assessText = document.getElementById('soapAssessmentText');
       if (assessText) {
-        assessText.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO) - ICD-10 J44.9 / J45.30 Specified.\n3. Essential Hypertension - Blood pressure controlled.`;
+        assessText.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO) - Specified (ICD-10 J44.9 / J45.30).\n3. Essential Hypertension - Blood pressure controlled.`;
       }
 
       window.clinicalState.appliedAco = true;
@@ -1825,42 +1836,6 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       
       const sPlan = document.getElementById('soapPlanText');
       if (sPlan) sPlan.value = `• Continue supportive inpatient care and serial vital signs monitoring.\n• Maintain supplemental oxygen PRN to keep SpO2 >= 94%.`;
-
-      // Reset Badges
-      const bObj = document.getElementById('badgeObjectiveStatus');
-      if (bObj) { bObj.innerText = 'Pending Labs'; bObj.className = 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200'; }
-      const bAssess = document.getElementById('badgeAssessmentStatus');
-      if (bAssess) { bAssess.innerText = 'Needs Specificity'; bAssess.className = 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200'; }
-      const bPlan = document.getElementById('badgePlanStatus');
-      if (bPlan) { bPlan.innerText = 'Unspecified Duration'; bPlan.className = 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200'; }
-
-      // Reset Banners
-      const bannerL = document.getElementById('bannerLabs');
-      if (bannerL) bannerL.className = 'p-3.5 rounded-xl border border-amber-200 bg-amber-50/70 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
-      const btnL = document.getElementById('btnInsertLabs');
-      if (btnL) {
-        btnL.innerHTML = '+ Insert Cerner LIS Biomarkers';
-        btnL.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer shrink-0';
-        btnL.onclick = window.handleInsertLabs;
-      }
-
-      const bannerA = document.getElementById('bannerAco');
-      if (bannerA) bannerA.className = 'p-3.5 rounded-xl border border-amber-200 bg-amber-50/70 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
-      const btnA = document.getElementById('btnClarifyAco');
-      if (btnA) {
-        btnA.innerHTML = '+ Clarify Comorbidity Specificity';
-        btnA.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer shrink-0';
-        btnA.onclick = window.handleClarifyAco;
-      }
-
-      const bannerP = document.getElementById('bannerPlan');
-      if (bannerP) bannerP.className = 'p-3.5 rounded-xl border border-amber-200 bg-amber-50/70 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
-      const btnP = document.getElementById('btnApplyPlan');
-      if (btnP) {
-        btnP.innerHTML = '+ Apply ATS/IDSA Plan Target';
-        btnP.className = 'px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-pointer shrink-0';
-        btnP.onclick = window.handleApplyPlan;
-      }
 
       window.recalculateClinicalState();
       window.handleLiveSoapInput();
