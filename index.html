@@ -1471,7 +1471,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       window.clinicalState.score = Math.min(score, 92);
       window.clinicalState.researchScore = Math.min(research, 89);
 
-      // Trigger UI updates
+      // Trigger UI updates across all components
       window.updateStep1UI();
       window.updateStep3UI();
       window.updateStep4UI();
@@ -1503,7 +1503,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       const numEl = document.getElementById('qualityScoreDisplay');
       if (numEl) numEl.innerText = score + '%';
 
-      // Update Gauge SVG Arc
+      // Update Gauge SVG Arc with smooth animation and color shift
       const arcEl = document.getElementById('qualityGaugeArc');
       if (arcEl) {
         const circumference = 251.32;
@@ -1511,11 +1511,11 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         arcEl.style.strokeDashoffset = offset;
 
         if (score < 75) {
-          arcEl.setAttribute('stroke', '#D97706');
+          arcEl.setAttribute('stroke', '#D97706'); // Amber
         } else if (score >= 75 && score < 90) {
-          arcEl.setAttribute('stroke', '#0D9488');
+          arcEl.setAttribute('stroke', '#0D9488'); // Teal
         } else {
-          arcEl.setAttribute('stroke', '#059669');
+          arcEl.setAttribute('stroke', '#059669'); // Emerald
         }
       }
 
@@ -1610,6 +1610,55 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         gPlan.innerHTML = window.clinicalState.appliedPlan
           ? '<span class="font-medium text-emerald-900">7-Day Stewardship Target</span><span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Validated ✓</span>'
           : '<span class="font-medium text-amber-900">7-Day Stewardship Target</span><span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Action Pending</span>';
+      }
+
+      // Update Action Banners & Badges
+      if (window.clinicalState.appliedLabs) {
+        const bannerL = document.getElementById('bannerLabs');
+        if (bannerL) bannerL.className = 'p-3.5 rounded-xl border border-emerald-300 bg-emerald-50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+        const btnL = document.getElementById('btnInsertLabs');
+        if (btnL) {
+          btnL.innerHTML = '<span>INGESTED ✓ LOINC Biomarkers: WBC 8.2 x10^9/L, CRP 6.5 mg/L, Procalcitonin 0.11 ng/mL</span>';
+          btnL.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default shrink-0';
+          btnL.onclick = null;
+        }
+        const bObj = document.getElementById('badgeObjectiveStatus');
+        if (bObj) {
+          bObj.innerText = 'LOINC Labs Ingested';
+          bObj.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200';
+        }
+      }
+
+      if (window.clinicalState.appliedAco) {
+        const bannerA = document.getElementById('bannerAco');
+        if (bannerA) bannerA.className = 'p-3.5 rounded-xl border border-emerald-300 bg-emerald-50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+        const btnA = document.getElementById('btnClarifyAco');
+        if (btnA) {
+          btnA.innerHTML = '<span>OPTIMIZED ✓ Asthma-COPD Overlap (ACO) - ICD-10 J44.9 / J45.30 Specified</span>';
+          btnA.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default shrink-0';
+          btnA.onclick = null;
+        }
+        const bAssess = document.getElementById('badgeAssessmentStatus');
+        if (bAssess) {
+          bAssess.innerText = 'ACO Specified';
+          bAssess.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200';
+        }
+      }
+
+      if (window.clinicalState.appliedPlan) {
+        const bannerP = document.getElementById('bannerPlan');
+        if (bannerP) bannerP.className = 'p-3.5 rounded-xl border border-emerald-300 bg-emerald-50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+        const btnP = document.getElementById('btnApplyPlan');
+        if (btnP) {
+          btnP.innerHTML = '<span>VERIFIED ✓ ATS/IDSA 7-Day Stewardship Target Met</span>';
+          btnP.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default shrink-0';
+          btnP.onclick = null;
+        }
+        const bPlan = document.getElementById('badgePlanStatus');
+        if (bPlan) {
+          bPlan.innerText = '7-Day Plan Set';
+          bPlan.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200';
+        }
       }
     };
 
@@ -1718,27 +1767,14 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     window.handleInsertLabs = function() {
       const objText = document.getElementById('soapObjectiveText');
       if (objText) {
-        objText.value = `• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% room air.\n• Physical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.\n• Ingested Cerner LIS LOINC Biomarkers (Aug 18):\n  - WBC Count: 8.2 x10^9/L (down from 14.1 x10^9/L on admission)\n  - Quantitative CRP: 6.5 mg/L (down from 45.0 mg/L, >85% reduction)\n  - Procalcitonin: 0.11 ng/mL (Normal baseline < 0.25 ng/mL, sepsis excluded)\n  - Urine Antigen: S. pneumoniae positive (confirmatory etiology)`;
+        const labText = "[Cerner LIS Biomarkers Aug 18: WBC 8.2 x10^9/L (from 14.1), CRP 6.5 mg/L (from 45.0), Procalcitonin 0.11 ng/mL]";
+        if (!objText.value.includes(labText)) {
+          objText.value = objText.value.trim() + "\n\n" + labText;
+        }
       }
 
       window.clinicalState.appliedLabs = true;
       window.recalculateClinicalState();
-
-      const badge = document.getElementById('badgeObjectiveStatus');
-      if (badge) {
-        badge.innerText = 'LOINC Labs Ingested';
-        badge.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200';
-      }
-
-      const banner = document.getElementById('bannerLabs');
-      if (banner) banner.className = 'p-3.5 rounded-xl border border-emerald-300 bg-emerald-50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
-      const btn = document.getElementById('btnInsertLabs');
-      if (btn) {
-        btn.innerHTML = '<span>INGESTED ✓ LOINC Biomarkers Linked</span>';
-        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default shrink-0';
-        btn.onclick = null;
-      }
-
       showToast('Cerner LIS Biomarkers Ingested (+10% Quality)', 'success');
       window.handleLiveSoapInput();
     };
@@ -1753,22 +1789,6 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
       window.clinicalState.appliedAco = true;
       window.recalculateClinicalState();
-
-      const badge = document.getElementById('badgeAssessmentStatus');
-      if (badge) {
-        badge.innerText = 'ACO Specified';
-        badge.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200';
-      }
-
-      const banner = document.getElementById('bannerAco');
-      if (banner) banner.className = 'p-3.5 rounded-xl border border-emerald-300 bg-emerald-50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
-      const btn = document.getElementById('btnClarifyAco');
-      if (btn) {
-        btn.innerHTML = '<span>OPTIMIZED ✓ ICD-10 Specified</span>';
-        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default shrink-0';
-        btn.onclick = null;
-      }
-
       showToast('Diagnosis Specificity Refined to ACO (+8% Quality)', 'success');
       window.handleLiveSoapInput();
     };
@@ -1783,22 +1803,6 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
       window.clinicalState.appliedPlan = true;
       window.recalculateClinicalState();
-
-      const badge = document.getElementById('badgePlanStatus');
-      if (badge) {
-        badge.innerText = '7-Day Plan Set';
-        badge.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200';
-      }
-
-      const banner = document.getElementById('bannerPlan');
-      if (banner) banner.className = 'p-3.5 rounded-xl border border-emerald-300 bg-emerald-50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
-      const btn = document.getElementById('btnApplyPlan');
-      if (btn) {
-        btn.innerHTML = '<span>VERIFIED ✓ ATS/IDSA Stewardship Target Set</span>';
-        btn.className = 'px-3.5 py-1.5 bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-2xs transition-all cursor-default shrink-0';
-        btn.onclick = null;
-      }
-
       showToast('ATS/IDSA 7-Day Stewardship Plan Applied (+6% Quality)', 'success');
       window.handleLiveSoapInput();
     };
@@ -1814,7 +1818,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       if (sSubj) sSubj.value = `71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.`;
       
       const sObj = document.getElementById('soapObjectiveText');
-      if (sObj) sObj.value = `• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% room air.\n• Physical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.`;
+      if (sObj) sObj.value = `Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\nPhysical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.`;
       
       const sAssess = document.getElementById('soapAssessmentText');
       if (sAssess) sAssess.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO) - Needs Diagnostic Refinement.\n3. Essential Hypertension - Blood pressure controlled.`;
@@ -1822,6 +1826,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       const sPlan = document.getElementById('soapPlanText');
       if (sPlan) sPlan.value = `• Continue supportive inpatient care and serial vital signs monitoring.\n• Maintain supplemental oxygen PRN to keep SpO2 >= 94%.`;
 
+      // Reset Badges
       const bObj = document.getElementById('badgeObjectiveStatus');
       if (bObj) { bObj.innerText = 'Pending Labs'; bObj.className = 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200'; }
       const bAssess = document.getElementById('badgeAssessmentStatus');
@@ -1829,6 +1834,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       const bPlan = document.getElementById('badgePlanStatus');
       if (bPlan) { bPlan.innerText = 'Unspecified Duration'; bPlan.className = 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200'; }
 
+      // Reset Banners
       const bannerL = document.getElementById('bannerLabs');
       if (bannerL) bannerL.className = 'p-3.5 rounded-xl border border-amber-200 bg-amber-50/70 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3';
       const btnL = document.getElementById('btnInsertLabs');
@@ -1874,7 +1880,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       if (macro === '.vitals') {
         const objText = document.getElementById('soapObjectiveText');
         if (objText && !objText.value.includes('BP 118/74')) {
-          objText.value = '• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% room air.\n' + objText.value;
+          objText.value = 'Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\n' + objText.value;
         }
       } else if (macro === '.labs') {
         window.handleInsertLabs();
