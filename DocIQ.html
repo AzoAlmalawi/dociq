@@ -1830,26 +1830,42 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       showToast('FHIR Downloaded', 'fhir_r4_sarah_alotaibi.json downloaded to your device.', 'success');
     }
 
+    window.setStep = function(step) {
+      window.navigateTo(step);
+    };
+    window.setActiveTab = window.setStep;
+
     function navigateTo(step) {
-      currentStep = step;
+      const target = Math.min(Math.max(Number(step) || 1, 1), 7);
+      currentStep = target;
+      
       for (let s = 1; s <= 7; s++) {
         const screenEl = document.getElementById('screen-' + s);
         if (screenEl) {
-          screenEl.classList.toggle('hidden', s !== step);
+          if (s === target) {
+            screenEl.style.display = 'block';
+            screenEl.classList.remove('hidden');
+          } else {
+            screenEl.style.display = 'none';
+            screenEl.classList.add('hidden');
+          }
         }
-        const btnEl = document.getElementById('stepBtn-' + s);
-        if (btnEl) {
-          const isActive = (s === step);
-          btnEl.className = isActive
-            ? 'w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-soft'
-            : 'w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
+        
+        const sideBtn = document.getElementById('stepBtn-' + s);
+        if (sideBtn) {
+          const isActive = (s === target);
+          sideBtn.className = isActive
+            ? 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-soft'
+            : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
         }
       }
 
-      if (step === 7) {
+      if (target === 7) {
         updateFinalRecordDisplay();
       }
 
+      const mainEl = document.querySelector('main');
+      if (mainEl) mainEl.scrollTop = 0;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
