@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DocIQ - Clinical Progress Note & EHR Intelligence Workstation</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocIQ - Clinical Documentation Intelligence & EHR Workstation</title>
   
-  <!-- Tailwind CSS CDN -->
+  <!-- Tailwind CSS via CDN -->
   
 
   <script>
@@ -246,7 +246,7 @@
       if (macro === '.vitals') {
         const objText = document.getElementById('soapObjectiveText');
         if (objText && !objText.value.includes('BP 118/74')) {
-          objText.value = '• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% room air.\n' + objText.value;
+          objText.value = '• Bedside Vitals (Day 3): BP 118/74 mmHg | HR 78 bpm (regular) | RR 16 | Temp 37.1°C (afebrile) | SpO2 98% on room air.\n' + objText.value;
         }
       } else if (macro === '.labs') {
         window.insertCernerLabs();
