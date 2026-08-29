@@ -1205,7 +1205,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       <!-- STEP 6: DUAL SCORES -->
       <div id="screen-6" class="w-full max-w-6xl mx-auto space-y-6 fade-in pb-12 hidden">
       
-      <!-- Header -->
+      <!-- Top Header Card -->
       <div class="flex items-center justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <h2 class="text-xl font-bold text-slate-900">Dual Scoring Engine</h2>
@@ -1213,21 +1213,20 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         </div>
         <button 
           onclick="navigateTo(7)"
-          class="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs rounded-xl shadow-sm transition flex items-center gap-2 cursor-pointer"
+          class="px-5 py-2.5 bg-teal-800 hover:bg-teal-900 text-white font-bold text-xs rounded-xl shadow-soft transition flex items-center gap-2 cursor-pointer"
         >
-          <span>Finalize Record</span>
-          <span>&rarr;</span>
+          <span>Finalize Record &rarr;</span>
         </button>
       </div>
 
-      <!-- Dual Grid Cards -->
+      <!-- Dual Cards Grid (Exact Match to Screenshot 6) -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         
         <!-- LEFT CARD: Documentation Quality Score -->
         <div class="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm flex flex-col">
           <div class="bg-[#0B1528] px-6 py-4 flex items-center justify-between">
             <h3 class="font-bold text-white text-base tracking-wide">Documentation Quality Score</h3>
-            <span id="step6QualityBadge" class="text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full transition-all">68% - Action Required</span>
+            <span id="step6QualityBadge" class="text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full font-mono transition-all">68% - Action Required</span>
           </div>
           
           <div class="p-6 space-y-5 flex-1">
@@ -1281,7 +1280,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         <div class="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm flex flex-col">
           <div class="bg-[#0E6245] px-6 py-4 flex items-center justify-between">
             <h3 class="font-bold text-white text-base tracking-wide">Research Readiness Score</h3>
-            <span id="step6ResearchBadge" class="text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full transition-all">72% - Moderate</span>
+            <span id="step6ResearchBadge" class="text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full font-mono transition-all">72% - Moderate</span>
           </div>
           
           <div class="p-6 space-y-5 flex-1">
@@ -1335,119 +1334,126 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
     </div>
 
-    <!-- ============================================================== -->
-    <!-- STEP 7: FINALIZE RECORD (REACTIVE PREVIEW & EHR SIGN-OFF)      -->
-    <!-- ============================================================== -->
+    <!-- STEP 7: FINALIZE RECORD -->
     <div id="screen-7" class="space-y-6 max-w-5xl mx-auto fade-in pb-12 hidden">
       
+      <!-- Top Warning Advisory Banner (Exact Match to Screenshot 7) -->
+      <div class="p-4 px-5 bg-amber-50/80 rounded-2xl border border-amber-200/90 flex items-start gap-3 shadow-2xs">
+        <span class="text-amber-600 text-sm mt-0.5">⚠️</span>
+        <div class="space-y-0.5 text-xs text-amber-950">
+          <div class="font-bold text-amber-900">Documentation Completeness Advisory</div>
+          <p class="text-amber-800 leading-relaxed text-[11px]">
+            Note: 3 ATS/IDSA recommendations remain unaddressed. Clinician attestation will record override in the audit log.
+          </p>
+        </div>
+      </div>
+
       <!-- Top Header Card -->
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <div class="flex items-center gap-2.5">
-            <h2 class="text-xl font-bold text-slate-900">Final Attestation & EHR Sign-Off</h2>
-            <span id="finalHeaderBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">Draft Status â€¢ 68%</span>
+            <h2 class="text-xl font-bold text-slate-900">Step 7: Finalize Clinical Record</h2>
+            <span id="finalHeaderBadge" class="px-2.5 py-0.5 rounded text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">Draft (Unsigned)</span>
           </div>
-          <p class="text-xs text-slate-500 mt-1">Real-time synchronized preview from Step 3 editor. Verify attestation certificate and commit HL7 FHIR bundle.</p>
+          <p class="text-xs text-slate-500 mt-1">Cryptographic SHA-256 provenance stamping and immediate FHIR R4 document bridge synchronization.</p>
         </div>
 
         <div class="flex items-center gap-2.5">
-          <button onclick="navigateTo(6)" class="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 shadow-2xs transition-all cursor-pointer">
-            â†گ Dual Scores
+          <button onclick="window.print()" class="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-2xs transition-all cursor-pointer">
+            Print Document
           </button>
-          <button onclick="saveFinalRecord()" class="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-soft transition-all flex items-center gap-2 cursor-pointer">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-            <span>Sign & Save to EHR</span>
+          <button onclick="saveFinalRecord()" class="px-5 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-soft transition-all flex items-center gap-1.5 cursor-pointer">
+            <span>Save Final Record in EHR ✓</span>
           </button>
         </div>
       </div>
 
-      <!-- 4 Structured SOAP Preview Cards (Live Reactive) -->
+      <!-- Hospital Clinical Progress Note Box -->
       <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div class="flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-            <span class="text-xs font-bold text-slate-900 uppercase tracking-wider">LIVE SYNCHRONIZED EHR NOTE PREVIEW</span>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">KING FAHD UNIVERSITY MEDICAL CENTER • INPATIENT CARE</span>
+            <h3 class="font-extrabold text-slate-900 text-sm tracking-wide mt-0.5">CLINICAL PROGRESS NOTE & STEP-DOWN</h3>
           </div>
-          <span class="text-xs font-mono text-slate-400">Auto-Synced with Step 3</span>
+          <div class="text-right text-xs text-slate-500">
+            <div>Patient: <strong class="text-slate-800 font-bold">Sarah Al-Otaibi</strong></div>
+            <div class="text-[11px]">MRN: <strong class="font-mono text-slate-700">882934</strong> • Attending: <strong class="text-slate-800">Dr. Mohammed</strong></div>
+          </div>
         </div>
 
-        <div class="space-y-4">
+        <!-- 4 Structured Sections (Exact Match to Screenshot 7) -->
+        <div class="space-y-3">
+          
           <!-- 1. SUBJECTIVE -->
-          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider">1. SUBJECTIVE</span>
-              <span class="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">HPI Confirmed</span>
+          <div class="p-4 rounded-xl bg-slate-50/90 border border-slate-200/80 space-y-1">
+            <div class="text-[11px] font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-teal-600"></span>
+              <span>SUBJECTIVE:</span>
             </div>
-            <div id="step7SubjectiveDisplay" class="font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.</div>
+            <div id="step7SubjectiveDisplay" class="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.</div>
           </div>
 
           <!-- 2. OBJECTIVE -->
-          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider">2. OBJECTIVE</span>
-              <span id="step7ObjectiveBadge" class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Pending LOINC Labs</span>
+          <div class="p-4 rounded-xl bg-slate-50/90 border border-slate-200/80 space-y-1">
+            <div class="text-[11px] font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-teal-600"></span>
+              <span>OBJECTIVE:</span>
             </div>
-            <div id="step7ObjectiveDisplay" class="font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">Vitals (Day 3): Temp: 37.1 آ°C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.
+            <div id="step7ObjectiveDisplay" class="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.
 Physical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.</div>
           </div>
 
           <!-- 3. ASSESSMENT -->
-          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider">3. ASSESSMENT</span>
-              <span id="step7AssessmentBadge" class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Needs Specificity</span>
+          <div class="p-4 rounded-xl bg-slate-50/90 border border-slate-200/80 space-y-1">
+            <div class="text-[11px] font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-teal-600"></span>
+              <span>ASSESSMENT:</span>
             </div>
-            <div id="step7AssessmentDisplay" class="font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).
-2. Asthma-COPD Overlap (ACO) - ICD-10 J44.9 / J45.30 Specified.
-3. Essential Hypertension - Blood pressure controlled.</div>
+            <div id="step7AssessmentDisplay" class="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">1. Community-Acquired Pneumonia (CAP) - Improving.
+2. Mild Asthma - Stable.
+3. Hypertension - Controlled.</div>
           </div>
 
           <!-- 4. PLAN -->
-          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] font-bold text-teal-800 uppercase tracking-wider">4. PLAN & STEWARDSHIP</span>
-              <span id="step7PlanBadge" class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Unspecified Duration</span>
+          <div class="p-4 rounded-xl bg-slate-50/90 border border-slate-200/80 space-y-1">
+            <div class="text-[11px] font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-teal-600"></span>
+              <span>PLAN:</span>
             </div>
-            <div id="step7PlanDisplay" class="font-mono text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">â€¢ Step-down to oral antibiotics: Amoxicillin-Clavulanate 875/125mg PO BID.
-â€¢ Target total duration: 7-day stewardship target per ATS/IDSA guidelines.
-â€¢ Discharge planning initiated; continue room air monitoring.</div>
+            <div id="step7PlanDisplay" class="text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">Continue IV antibiotics and supportive respiratory care.
+Monitor vitals.
+Plan discharge when clinically ready.</div>
           </div>
-        </div>
-      </div>
 
-      <!-- Attestation & Signature Certificate Card -->
-      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-        <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider">PHYSICIAN ATTESTATION & DIGITAL SIGNATURE</h3>
-        
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-            <span class="text-[10px] font-bold text-slate-400 uppercase">ATTESTING PHYSICIAN</span>
-            <div class="text-xs font-bold text-slate-900">Dr. Mohammed (Attending)</div>
-            <div class="text-[10px] text-slate-500 font-mono">License: SA-MD-99482</div>
-          </div>
-          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-            <span class="text-[10px] font-bold text-slate-400 uppercase">CLINICAL QUALITY ATTESTATION</span>
-            <div class="text-xs font-bold text-emerald-700" id="finalAttestQuality">68% Documentation Quality</div>
-            <div class="text-[10px] text-slate-500 font-mono" id="finalAttestCriteriaMet">8/11 Criteria Met â€¢ 3 Gaps</div>
-          </div>
-          <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-            <span class="text-[10px] font-bold text-slate-400 uppercase">FHIR R4 PROTOCOL</span>
-            <div class="text-xs font-bold text-teal-800">HL7 FHIR R4 Validated</div>
-            <div class="text-[10px] text-slate-500 font-mono">USCDI v6 Standard Compliant</div>
-          </div>
         </div>
 
-        <div class="pt-2 flex items-center justify-between">
-          <button onclick="openFhirModal()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-all cursor-pointer flex items-center gap-1.5">
-            <span>Inspect FHIR R4 Bundle JSON</span>
-          </button>
-          <button onclick="saveFinalRecord()" class="px-6 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-soft transition-all flex items-center gap-2 cursor-pointer">
-            <span>Sign & Save to EHR</span>
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        <!-- Attestation & FHIR Bar (Exact Match to Screenshot 7) -->
+        <div class="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center justify-center text-xs shrink-0 shadow-2xs">
+              🔒
+            </div>
+            <div class="space-y-0.5">
+              <div class="flex items-center gap-2">
+                <strong class="text-xs font-bold text-slate-900">Dr. Mohammed, MD • Attending Physician</strong>
+                <span id="attestStatusPill" class="px-2 py-0.2 rounded bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-bold">Unsigned Draft</span>
+              </div>
+              <div class="text-[10px] font-mono text-slate-400">
+                Audit Hash: <span class="font-bold text-slate-600">sha256-df9b2a7d4fcbdad279e61209b44c52e71fa01</span> • 2026-08-27T18:50:00Z
+              </div>
+            </div>
+          </div>
+
+          <button onclick="openFhirModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl shadow-2xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0">
+            <svg class="w-3.5 h-3.5 text-teal-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+            <span>View FHIR R4 Bundle</span>
           </button>
         </div>
+
       </div>
-    </main>
+
+    </div>
+  </main>
   </div>
 
   <!-- FHIR MODAL -->
