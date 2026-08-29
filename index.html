@@ -767,38 +767,34 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
                 <span id="aiScoreBadge" class="px-2 py-0.5 rounded text-xs font-bold badge-amber transition-all">68% (Needs Attention)</span>
               </div>
 
-              <div class="flex items-center gap-5 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                <div class="w-20 h-20 rounded-full bg-amber-50 border-8 border-amber-500 flex flex-col items-center justify-center shrink-0 shadow-soft transition-all duration-500" id="gaugeCircleBorder">
-                  <span id="aiGaugeNumber" class="text-2xl font-extrabold text-amber-800 transition-all">68%</span>
-                  <span class="text-[9px] font-bold text-amber-700" id="gaugeSubLabel">DEFICIENT</span>
+              <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                <div class="flex items-center gap-4">
+                  <div class="w-20 h-20 rounded-full bg-red-50 border-8 border-red-500 flex flex-col items-center justify-center shrink-0 shadow-sm transition-all duration-500" id="gaugeCircleBorder">
+                    <span id="aiGaugeNumber" class="text-2xl font-black text-red-700 transition-all">68%</span>
+                    <span class="text-[9px] font-bold text-red-600 uppercase tracking-wider" id="gaugeSubLabel">DEFICIENT</span>
+                  </div>
+                  <div class="space-y-1 text-xs flex-1">
+                    <div class="flex items-center justify-between">
+                      <span class="font-bold text-slate-900">Live Documentation Quality</span>
+                      <span id="aiScoreBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 transition-all">68% (Deficient)</span>
+                    </div>
+                    <p id="aiGaugeDesc" class="text-slate-500 leading-relaxed text-[11px]">
+                      Accept the 3 AI suggestions on the left to elevate documentation to <strong>92% (Excellent)</strong>.
+                    </p>
+                  </div>
                 </div>
-                <div class="space-y-1 text-xs">
-                  <div class="font-bold text-slate-900">Live PRD Evaluation Engine</div>
-                  <p id="aiGaugeDesc" class="text-slate-500 leading-relaxed text-[11px]">
-                    Accept the 3 AI suggestions on the left to elevate documentation to <strong>92% (Excellent)</strong>.
-                  </p>
-                </div>
-              </div>
 
-              <div class="space-y-2 text-xs">
-                <div class="flex justify-between py-1 border-b border-slate-100">
-                  <span class="text-slate-500">1. Completeness Weight (40%)</span>
-                  <strong class="text-slate-800" id="weightCompleteness">29.09 pts (8/11 items)</strong>
-                </div>
-                <div class="flex justify-between py-1 border-b border-slate-100">
-                  <span class="text-slate-500">2. Diagnostic Precision (20%)</span>
-                  <strong class="text-slate-800" id="weightClarity">13.00 pts</strong>
-                </div>
-                <div class="flex justify-between py-1 border-b border-slate-100">
-                  <span class="text-slate-500">3. Consistency & Logic (20%)</span>
-                  <strong class="text-slate-800" id="weightConsistency">12.00 pts</strong>
-                </div>
-                <div class="flex justify-between py-1">
-                  <span class="text-slate-500">4. SOAP Structure (20%)</span>
-                  <strong class="text-slate-800" id="weightOrg">20.00 pts</strong>
+                <!-- DYNAMIC PROGRESS BAR (Red <80% -> Orange 80-89% -> Green >=90%) -->
+                <div class="space-y-1 pt-1 border-t border-slate-200/80">
+                  <div class="flex justify-between items-center text-[11px] font-bold">
+                    <span class="text-slate-600">Compliance Meter:</span>
+                    <span id="progressPercentLabel" class="font-mono text-red-700 font-bold transition-all">68% / 100%</span>
+                  </div>
+                  <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden shadow-inner">
+                    <div id="qualityLinearProgressBar" class="h-full bg-red-500 rounded-full transition-all duration-700 ease-out" style="width: 68%;"></div>
+                  </div>
                 </div>
               </div>
-            </div>
 
             <div id="alertsContainer" class="card-hospital p-5 space-y-3 bg-amber-50/60 border-amber-300 transition-all">
               <div class="flex items-center justify-between">
@@ -1702,12 +1698,29 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         const r = window.clinicalState.researchScore;
 
         const sCardQ = getEl('sarahCardQualityScore', 'queueDocScore-1');
-        if (sCardQ) sCardQ.innerText = Math.round(q) + '%';
+        if (sCardQ) {
+          sCardQ.innerText = Math.round(q) + '%';
+          if (q < 80) sCardQ.className = 'font-black font-mono text-red-600 text-lg transition-all';
+          else if (q < 90) sCardQ.className = 'font-black font-mono text-amber-600 text-lg transition-all';
+          else sCardQ.className = 'font-black font-mono text-emerald-600 text-lg transition-all';
+        }
+
         const sCardR = getEl('sarahCardResearchScore', 'queueResearchScore-1');
         if (sCardR) sCardR.innerText = Math.round(r) + '%';
 
+        // Patient Card Queue Bar Color & Width (Red <80% -> Orange 80-89% -> Green >=90%)
         const qBar = getEl('queueDocBar-1');
-        if (qBar) qBar.style.width = q + '%';
+        if (qBar) {
+          qBar.style.width = q + '%';
+          if (q < 80) {
+            qBar.className = 'h-full bg-red-500 transition-all duration-500 rounded-full';
+          } else if (q < 90) {
+            qBar.className = 'h-full bg-amber-500 transition-all duration-500 rounded-full';
+          } else {
+            qBar.className = 'h-full bg-emerald-500 transition-all duration-500 rounded-full';
+          }
+        }
+
         const rBar = getEl('queueResearchBar-1');
         if (rBar) rBar.style.width = r + '%';
 
@@ -1721,37 +1734,82 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         const score = window.clinicalState.score;
         const research = window.clinicalState.researchScore;
 
+        // Gauge Number
         const numEl = getEl('qualityScoreDisplay', 'aiGaugeNumber');
-        if (numEl) numEl.innerText = score + '%';
+        if (numEl) {
+          numEl.innerText = score + '%';
+          if (score < 80) numEl.className = 'text-2xl font-black text-red-700 transition-all';
+          else if (score < 90) numEl.className = 'text-2xl font-black text-amber-700 transition-all';
+          else numEl.className = 'text-2xl font-black text-emerald-800 transition-all';
+        }
 
-        const arcEl = getEl('qualityGaugeArc', 'gaugeCircleBorder');
-        if (arcEl) {
-          const circumference = 251.32;
-          const offset = circumference * (1 - score / 100);
-          arcEl.style.strokeDashoffset = offset;
-          if (score < 75) {
-            arcEl.setAttribute('stroke', '#D97706');
-          } else if (score >= 75 && score < 90) {
-            arcEl.setAttribute('stroke', '#0D9488');
+        // Circular Ring Border & Background (Red <80% -> Orange 80-89% -> Green >=90%)
+        const ringEl = getEl('gaugeCircleBorder');
+        const subLabel = getEl('gaugeSubLabel');
+        if (ringEl) {
+          if (score < 80) {
+            ringEl.className = 'w-20 h-20 rounded-full bg-red-50 border-8 border-red-500 flex flex-col items-center justify-center shrink-0 shadow-sm transition-all duration-500';
+            if (subLabel) {
+              subLabel.innerText = 'DEFICIENT';
+              subLabel.className = 'text-[9px] font-bold text-red-600 uppercase tracking-wider';
+            }
+          } else if (score < 90) {
+            ringEl.className = 'w-20 h-20 rounded-full bg-amber-50 border-8 border-amber-500 flex flex-col items-center justify-center shrink-0 shadow-sm transition-all duration-500';
+            if (subLabel) {
+              subLabel.innerText = 'PARTIAL';
+              subLabel.className = 'text-[9px] font-bold text-amber-700 uppercase tracking-wider';
+            }
           } else {
-            arcEl.setAttribute('stroke', '#059669');
+            ringEl.className = 'w-20 h-20 rounded-full bg-emerald-50 border-8 border-emerald-500 flex flex-col items-center justify-center shrink-0 shadow-sm transition-all duration-500';
+            if (subLabel) {
+              subLabel.innerText = 'EXCELLENT';
+              subLabel.className = 'text-[9px] font-bold text-emerald-700 uppercase tracking-wider';
+            }
           }
         }
 
+        // Linear Progress Bar Width & Dynamic Color
+        const linearBar = getEl('qualityLinearProgressBar');
+        const progressLabel = getEl('progressPercentLabel');
+        if (linearBar) {
+          linearBar.style.width = score + '%';
+          if (score < 80) {
+            linearBar.className = 'h-full bg-red-500 rounded-full transition-all duration-700 ease-out';
+            if (progressLabel) {
+              progressLabel.innerText = `${score}% (Needs Attention)`;
+              progressLabel.className = 'font-mono text-red-700 font-bold transition-all';
+            }
+          } else if (score < 90) {
+            linearBar.className = 'h-full bg-amber-500 rounded-full transition-all duration-700 ease-out';
+            if (progressLabel) {
+              progressLabel.innerText = `${score}% (In Review / Partial)`;
+              progressLabel.className = 'font-mono text-amber-700 font-bold transition-all';
+            }
+          } else {
+            linearBar.className = 'h-full bg-emerald-500 rounded-full transition-all duration-700 ease-out';
+            if (progressLabel) {
+              progressLabel.innerText = `${score}% (Compliant & Validated)`;
+              progressLabel.className = 'font-mono text-emerald-700 font-bold transition-all';
+            }
+          }
+        }
+
+        // Status Badge (Red <80% -> Orange 80-89% -> Green >=90%)
         const badgeEl = getEl('qualityStatusBadge', 'aiScoreBadge');
         if (badgeEl) {
-          if (score < 75) {
-            badgeEl.innerText = `${score}% (Needs Attention)`;
-            badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 transition-all';
-          } else if (score >= 75 && score < 90) {
-            badgeEl.innerText = `${score}% (In Review / Partial)`;
-            badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200 transition-all';
+          if (score < 80) {
+            badgeEl.innerText = `${score}% (Deficient)`;
+            badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 transition-all';
+          } else if (score < 90) {
+            badgeEl.innerText = `${score}% (In Review)`;
+            badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 transition-all';
           } else {
-            badgeEl.innerText = `${score}% (Excellent / Compliant)`;
+            badgeEl.innerText = `${score}% (Compliant)`;
             badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all';
           }
         }
 
+        // Points Breakdown Matrix
         const ptsComp = getEl('ptsCompleteness', 'weightCompleteness');
         const ptsPrec = getEl('ptsPrecision', 'weightClarity');
         const ptsCons = getEl('ptsConsistency', 'weightConsistency');
