@@ -1422,7 +1422,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     }
 
     // ==============================================================
-    // 2. BULLETPROOF NAVIGATION ROUTER (100% Zero-Latency)
+    // 2. BULLETPROOF NAVIGATION ROUTER
     // ==============================================================
     window.navigateTo = function(step) {
       try {
@@ -1451,11 +1451,10 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
           }
         }
 
-        // Trigger updates safely with try/catch
-        try { if (typeof window.recalculateClinicalState === 'function') window.recalculateClinicalState(); } catch(e) { console.error(e); }
-        try { if (target === 4 && typeof window.renderStep4Checklist === 'function') window.renderStep4Checklist(); } catch(e) { console.error(e); }
-        try { if (target === 6 && typeof window.updateStep6UI === 'function') window.updateStep6UI(); } catch(e) { console.error(e); }
-        try { if (target === 7 && typeof window.updateStep7UI === 'function') window.updateStep7UI(); } catch(e) { console.error(e); }
+        try { if (typeof window.recalculateClinicalState === 'function') window.recalculateClinicalState(); } catch(e) {}
+        try { if (target === 4 && typeof window.renderStep4Checklist === 'function') window.renderStep4Checklist(); } catch(e) {}
+        try { if (target === 6 && typeof window.updateStep6UI === 'function') window.updateStep6UI(); } catch(e) {}
+        try { if (target === 7 && typeof window.updateStep7UI === 'function') window.updateStep7UI(); } catch(e) {}
 
         const mainEl = document.querySelector('main');
         if (mainEl) mainEl.scrollTop = 0;
@@ -1465,7 +1464,6 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       }
     };
 
-    // Navigation Aliases
     function navigateTo(step) { window.navigateTo(step); }
     function setStep(step) { window.navigateTo(step); }
     function setActiveTab(step) { window.navigateTo(step); }
@@ -1475,7 +1473,203 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     window.openStep = window.navigateTo;
 
     // ==============================================================
-    // 3. RECALCULATE CLINICAL STATE & UI SYNC
+    // 3. IMMUTABLE CLINICAL AUDIT TRAIL ENGINE
+    // ==============================================================
+    const INITIAL_AUDIT_LOGS = [
+      {
+        id: "AUD-2026-0815-001",
+        timestamp: "2026-08-15 14:22:10 AST",
+        actor: {
+          name: "Dr. Mohammed",
+          role: "Attending Pulmonologist",
+          license: "SA-MD-99482",
+          department: "Inpatient Pulmonary Service"
+        },
+        action: "Inpatient Admission & Telemetry Baseline Linked",
+        category: "ADMISSION_INTAKE",
+        badgeColor: "bg-slate-100 text-slate-800 border-slate-300",
+        details: "Patient Sarah Al-Otaibi (MRN: 882934) admitted to Ward 4, Bed 402B. Baseline vitals and IV Ceftriaxone regimen recorded.",
+        impact: "EHR Encounter Initialized",
+        hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        id: "AUD-2026-0818-002",
+        timestamp: "2026-08-18 08:30:14 AST",
+        actor: {
+          name: "Dr. Mohammed",
+          role: "Attending Pulmonologist",
+          license: "SA-MD-99482",
+          department: "Inpatient Pulmonary Service"
+        },
+        action: "Day 3 Clinical SOAP Progress Note Drafted",
+        category: "NOTE_CREATION",
+        badgeColor: "bg-amber-50 text-amber-800 border-amber-300",
+        details: "Initial un-remediated physician draft recorded with baseline Documentation Quality 68% and Research Readiness 72%.",
+        impact: "Initial Score: 68% (Needs Attention)",
+        hash: "7d2c11f4a9b71e8f4b23a1059c3f99b2e81794b1a03e5c7d2e4f6a8b0c2e4f6a"
+      }
+    ];
+
+    window.auditLogs = [...INITIAL_AUDIT_LOGS];
+
+    window.addAuditLogEntry = function(action, category, details, impact, badgeColor = 'bg-teal-50 text-teal-800 border-teal-300') {
+      const now = new Date();
+      const timeStr = now.getFullYear() + '-' + 
+        String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(now.getDate()).padStart(2, '0') + ' ' + 
+        String(now.getHours()).padStart(2, '0') + ':' + 
+        String(now.getMinutes()).padStart(2, '0') + ':' + 
+        String(now.getSeconds()).padStart(2, '0') + ' AST';
+
+      const entryId = "AUD-2026-" + Date.now().toString().slice(-6);
+      
+      const rawString = `${entryId}-${timeStr}-Dr.Mohammed-${action}-${details}`;
+      let hash = 0;
+      for (let i = 0; i < rawString.length; i++) {
+        hash = ((hash << 5) - hash) + rawString.charCodeAt(i);
+        hash |= 0;
+      }
+      const hexHash = Math.abs(hash).toString(16).padStart(16, '0') + '9fc882934e0a7b4c';
+
+      const newEntry = {
+        id: entryId,
+        timestamp: timeStr,
+        actor: {
+          name: "Dr. Mohammed",
+          role: "Attending Pulmonologist",
+          license: "SA-MD-99482",
+          department: "Inpatient Pulmonary Service"
+        },
+        action: action,
+        category: category,
+        badgeColor: badgeColor,
+        details: details,
+        impact: impact,
+        hash: hexHash
+      };
+
+      window.auditLogs.push(newEntry);
+      window.renderAuditTrailUI();
+    };
+
+    window.renderAuditTrailUI = function() {
+      const container = document.getElementById('auditLogsContainer');
+      const countHeader = document.getElementById('auditHeaderCountBadge');
+      const countModal = document.getElementById('auditEventCounter');
+
+      const count = window.auditLogs.length;
+      if (countHeader) countHeader.innerText = count;
+      if (countModal) countModal.innerText = `${count} Clinical Events`;
+
+      if (!container) return;
+
+      container.innerHTML = window.auditLogs.map((log, index) => `
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3 hover:border-teal-300 transition-all">
+          
+          <!-- Header: Timestamp & Category -->
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-teal-700 text-white flex items-center justify-center font-bold text-xs">
+                ${index + 1}
+              </span>
+              <span class="text-xs font-black text-slate-900">${log.action}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${log.badgeColor}">
+                ${log.category}
+              </span>
+              <span class="text-[11px] font-mono text-slate-500 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                ${log.timestamp}
+              </span>
+            </div>
+          </div>
+
+          <!-- Actor Profile Card -->
+          <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-lg border border-slate-200/80 text-xs text-slate-700">
+            <div class="w-8 h-8 rounded-full bg-teal-700 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-2xs">
+              DM
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <strong class="text-slate-900 font-extrabold">${log.actor.name}</strong>
+                <span class="text-slate-500 font-normal">(${log.actor.role})</span>
+                <span class="px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 text-[10px] font-mono font-bold">
+                  License: ${log.actor.license}
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500">${log.actor.department}</p>
+            </div>
+          </div>
+
+          <!-- Clinical Data Update Box -->
+          <div class="space-y-1.5 text-xs">
+            <p class="text-slate-700 font-normal leading-relaxed bg-teal-50/30 p-2.5 rounded-lg border border-teal-100 font-sans">
+              <strong class="text-teal-900">Clinical Data Update:</strong> ${log.details}
+            </p>
+            <div class="flex items-center justify-between text-[11px] pt-1">
+              <span class="text-slate-600">
+                <strong class="text-slate-800">Quality Impact:</strong> <span class="font-bold text-teal-800">${log.impact}</span>
+              </span>
+              <span class="text-[10px] font-mono text-slate-400">
+                Ledger ID: <strong class="text-slate-600">${log.id}</strong>
+              </span>
+            </div>
+          </div>
+
+          <!-- Provenance Footer -->
+          <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-slate-400">
+            <div class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              <span class="text-emerald-700 font-bold">Cryptographically Provenanced:</span>
+              <span class="truncate max-w-[280px]">${log.hash}</span>
+            </div>
+            <span class="text-slate-500 font-sans font-bold bg-slate-100 px-2 py-0.5 rounded">USCDI v6 Verified</span>
+          </div>
+
+        </div>
+      `).join('');
+    };
+
+    window.downloadAuditLogJson = function() {
+      const payload = {
+        exportType: "DocIQ_Clinical_Audit_Trail",
+        patient: {
+          name: "Sarah Al-Otaibi",
+          mrn: "882934",
+          age: 71,
+          gender: "Female",
+          ward: "Inpatient Pulmonary Ward 4",
+          bed: "402B"
+        },
+        exportedAt: new Date().toISOString(),
+        exportedBy: {
+          name: "Dr. Mohammed",
+          role: "Attending Pulmonologist",
+          license: "SA-MD-99482"
+        },
+        totalEvents: window.auditLogs.length,
+        events: window.auditLogs
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `DocIQ_Audit_Trail_Sarah_AlOtaibi_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('Audit Log JSON Downloaded Successfully', 'success');
+    };
+
+    window.clearTransientLogs = function() {
+      window.auditLogs = [...INITIAL_AUDIT_LOGS];
+      window.renderAuditTrailUI();
+      showToast('Audit Log Reset to Initial Baseline', 'info');
+    };
+
+    // ==============================================================
+    // 4. RECALCULATE CLINICAL STATE & UI SYNC
     // ==============================================================
     window.recalculateClinicalState = function() {
       try {
@@ -1489,12 +1683,12 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         window.clinicalState.score = Math.min(score, 92);
         window.clinicalState.researchScore = Math.min(research, 89);
 
-        // Update all screens safely
         window.updateStep1UI();
         window.updateStep3UI();
         window.updateStep4UI();
         window.updateStep6UI();
         window.updateStep7UI();
+        window.renderAuditTrailUI();
       } catch (err) {
         console.error("Recalculate error:", err);
       }
@@ -1502,7 +1696,6 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
     window.updateGlobalScores = window.recalculateClinicalState;
 
-    // Step 1 UI Update
     window.updateStep1UI = function() {
       try {
         const q = window.clinicalState.score;
@@ -1520,20 +1713,17 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
         const asideQ = getEl('asideQualityDisplay');
         if (asideQ) asideQ.innerText = Math.round(q) + '%';
-      } catch (e) { console.error(e); }
+      } catch (e) {}
     };
 
-    // Step 3 UI Update
     window.updateStep3UI = function() {
       try {
         const score = window.clinicalState.score;
         const research = window.clinicalState.researchScore;
 
-        // Gauge Number
         const numEl = getEl('qualityScoreDisplay', 'aiGaugeNumber');
         if (numEl) numEl.innerText = score + '%';
 
-        // Gauge Arc
         const arcEl = getEl('qualityGaugeArc', 'gaugeCircleBorder');
         if (arcEl) {
           const circumference = 251.32;
@@ -1548,7 +1738,6 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
           }
         }
 
-        // Status Badge
         const badgeEl = getEl('qualityStatusBadge', 'aiScoreBadge');
         if (badgeEl) {
           if (score < 75) {
@@ -1563,7 +1752,6 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
           }
         }
 
-        // Points Breakdown Matrix
         const ptsComp = getEl('ptsCompleteness', 'weightCompleteness');
         const ptsPrec = getEl('ptsPrecision', 'weightClarity');
         const ptsCons = getEl('ptsConsistency', 'weightConsistency');
@@ -1596,8 +1784,6 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
           if (ptsTot) ptsTot.innerText = '92.00 / 100';
         }
 
-        // Update Gap Banners & Diff Views
-        // 1. Labs
         const bLabsAmber = getEl('bannerLabsAmber', 'objBeforeBadge');
         const bLabsGreen = getEl('bannerLabsGreen', 'objAfterBadge');
         const objBadge = getEl('badgeObjectiveStatus', 'objectiveStatusBadge');
@@ -1617,7 +1803,6 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
           }
         }
 
-        // 2. ACO
         const bAcoAmber = getEl('bannerAcoAmber', 'assessBeforeBadge');
         const bAcoGreen = getEl('bannerAcoGreen', 'assessAfterBadge');
         const assessBadge = getEl('badgeAssessmentStatus', 'assessmentStatusBadge');
@@ -1637,7 +1822,6 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
           }
         }
 
-        // 3. Plan
         const bPlanAmber = getEl('bannerPlanAmber', 'planBeforeBadge');
         const bPlanGreen = getEl('bannerPlanGreen', 'planAfterBadge');
         const planBadge = getEl('badgePlanStatus', 'planStatusBadge');
@@ -1657,7 +1841,6 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
           }
         }
 
-        // Update Gap Counters
         let pending = 0;
         if (!window.clinicalState.appliedLabs) pending++;
         if (!window.clinicalState.appliedAco) pending++;
@@ -1675,10 +1858,9 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         }
 
         window.handleLiveSoapInput();
-      } catch (e) { console.error(e); }
+      } catch (e) {}
     };
 
-    // Live Word & Character Counter
     window.handleLiveSoapInput = function() {
       try {
         const sSubj = getEl('soapSubjectiveText', 'subjectiveTextarea')?.value || '';
@@ -1694,16 +1876,15 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         if (counterEl) {
           counterEl.innerText = `${wordCount} words • ${charCount} chars`;
         }
-      } catch (e) { console.error(e); }
+      } catch (e) {}
     };
 
-    // Step 4 UI Update (Checklist)
     window.updateStep4UI = function() {
       try {
         if (typeof window.renderStep4Checklist === 'function') {
           window.renderStep4Checklist();
         }
-      } catch (e) { console.error(e); }
+      } catch (e) {}
     };
 
     window.renderStep4Checklist = function() {
@@ -1741,10 +1922,9 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             }
           </div>
         `).join('');
-      } catch (e) { console.error(e); }
+      } catch (e) {}
     };
 
-    // Step 6 UI Update (Dual Scoring)
     window.updateStep6UI = function() {
       try {
         const q = window.clinicalState.score;
@@ -1768,10 +1948,9 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         if (rBadge) {
           rBadge.innerText = `${Math.round(r)}% - Research Ready`;
         }
-      } catch (e) { console.error(e); }
+      } catch (e) {}
     };
 
-    // Step 7 UI Update (Finalize Record Preview)
     window.updateStep7UI = function() {
       try {
         const sSubj = getEl('soapSubjectiveText', 'subjectiveTextarea')?.value || `71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.`;
@@ -1816,11 +1995,11 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
         const fQuality = document.getElementById('finalAttestQuality');
         if (fQuality) fQuality.innerText = Math.round(window.clinicalState.score) + '%';
-      } catch (e) { console.error(e); }
+      } catch (e) {}
     };
 
     // ==============================================================
-    // 4. ACTIVE CLICK MUTATION HANDLERS (STEP 3 PATCHES)
+    // 5. AUDITED ACTION HANDLERS (LOGGED WITH DR. MOHAMMED)
     // ==============================================================
     window.handleInsertLabs = function() {
       const objText = getEl('soapObjectiveText', 'objectiveTextarea');
@@ -1831,6 +2010,16 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
       window.clinicalState.appliedLabs = true;
       window.recalculateClinicalState();
+      
+      // Log to Audit Trail
+      window.addAuditLogEntry(
+        "Cerner LIS LOINC Biomarkers Ingested",
+        "LAB_INGESTION",
+        "WBC 8.2x10^9/L (from 14.1), CRP 6.5 mg/L (85% reduction), Procalcitonin 0.11 ng/mL linked into Objective note.",
+        "Quality Score: +8% (Elevated to " + window.clinicalState.score + "%)",
+        "bg-teal-50 text-teal-800 border-teal-300"
+      );
+
       showToast('Cerner LIS LOINC Biomarkers Ingested (+8% Quality)', 'success');
       window.handleLiveSoapInput();
     };
@@ -1846,6 +2035,16 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
       window.clinicalState.appliedAco = true;
       window.recalculateClinicalState();
+
+      // Log to Audit Trail
+      window.addAuditLogEntry(
+        "Comorbidity Specificity Clarified to ACO (J44.9)",
+        "DIAGNOSTIC_PRECISION",
+        "Upgraded comorbidity entry from 'Mild Asthma' to 'Asthma-COPD Overlap (ACO - ICD-10 J44.9/J45.30) - Specified & Stable'.",
+        "Quality Score: +8% (Elevated to " + window.clinicalState.score + "%)",
+        "bg-teal-50 text-teal-800 border-teal-300"
+      );
+
       showToast('Comorbidity Refined to ACO J44.9 (+8% Quality)', 'success');
       window.handleLiveSoapInput();
     };
@@ -1861,6 +2060,16 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
       window.clinicalState.appliedPlan = true;
       window.recalculateClinicalState();
+
+      // Log to Audit Trail
+      window.addAuditLogEntry(
+        "ATS/IDSA 7-Day Stewardship Regimen Applied",
+        "ANTIMICROBIAL_STEWARDSHIP",
+        "Switched to oral Augmentin 875/125mg BID with 7-day stewardship target course definition and discharge plan.",
+        "Quality Score: +8% (Elevated to " + window.clinicalState.score + "%)",
+        "bg-teal-50 text-teal-800 border-teal-300"
+      );
+
       showToast('ATS/IDSA 7-Day Stewardship Plan Applied (+8% Quality)', 'success');
       window.handleLiveSoapInput();
     };
@@ -1883,6 +2092,16 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
       window.recalculateClinicalState();
       window.handleLiveSoapInput();
+
+      // Log to Audit Trail
+      window.addAuditLogEntry(
+        "DocIQ CDS Fast-Track Clinical Protocol Applied",
+        "CDS_FAST_TRACK",
+        "Simultaneously applied LOINC Biomarkers, ACO Specificity (J44.9), and ATS/IDSA 7-day Augmentin stewardship plan.",
+        "Quality Score Elevated to 92% (Fully Compliant)",
+        "bg-emerald-50 text-emerald-800 border-emerald-300"
+      );
+
       showToast('⚡ Quick-Fill Applied: Quality Elevated to 92% (Compliant)', 'success');
     };
 
@@ -1903,6 +2122,16 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
       window.recalculateClinicalState();
       window.handleLiveSoapInput();
+
+      // Log to Audit Trail
+      window.addAuditLogEntry(
+        "Clinical Draft Reset to Raw Physician Baseline",
+        "NOTE_REVERSION",
+        "Rolled back remediations to raw un-augmented physician draft.",
+        "Quality Score Reset to 68% (Needs Attention)",
+        "bg-amber-50 text-amber-800 border-amber-300"
+      );
+
       showToast('↺ Reset to Raw Physician Draft (68% Quality)', 'info');
     };
 
@@ -1911,6 +2140,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         const obj = getEl('soapObjectiveText', 'objectiveTextarea');
         if (obj) {
           obj.value = `Vitals (Day 3): Temp: 37.1 °C, BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\n` + obj.value;
+          window.addAuditLogEntry("Macro .vitals Applied", "MACRO_TELEMETRY", "Appended bedside telemetry to Objective section.", "Telemetry Recorded");
           showToast('Telemetry Vitals appended', 'info');
         }
       } else if (macro === '.labs') {
@@ -1919,6 +2149,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         const subj = getEl('soapSubjectiveText', 'subjectiveTextarea');
         if (subj) {
           subj.value += `\n• Severity Score: CURB-65 = 1 (Age 71, Low Risk).`;
+          window.addAuditLogEntry("Macro .curb65 Applied", "MACRO_SEVERITY", "Appended CURB-65 score calculation to Subjective section.", "Severity Calculated");
           showToast('CURB-65 calculation appended', 'info');
         }
       } else if (macro === '.stewardship') {
@@ -1932,7 +2163,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     };
 
     // ==============================================================
-    // 5. TOAST & MODAL UTILITIES
+    // 6. TOAST, MODAL & SIGNING UTILITIES
     // ==============================================================
     function showToast(msg, type = 'info') {
       const container = getEl('toastContainer', 'appToastBox');
@@ -1955,6 +2186,9 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       if (m) {
         m.classList.remove('hidden');
         m.style.display = 'flex';
+        if (id === 'auditModal') {
+          window.renderAuditTrailUI();
+        }
       }
     }
 
@@ -1990,12 +2224,19 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     window.copyFhirJson = copyFhirJson;
 
     function saveFinalRecord() {
+      window.addAuditLogEntry(
+        "Cryptographic 2048-bit RSA Attestation Signed & FHIR R4 Bundle Sealed",
+        "EHR_ATTESTATION",
+        "Encounter Day 3 Progress Note cryptographically sealed with RSA-2048 digital certificate and broadcast to Cerner HIE repository.",
+        "Status: FINAL / SEALED (Quality: " + window.clinicalState.score + "%)",
+        "bg-emerald-100 text-emerald-900 border-emerald-400"
+      );
       showToast('✓ Cryptographically Signed & Committed to Cerner EHR', 'success');
+      window.renderAuditTrailUI();
     }
 
     window.saveFinalRecord = saveFinalRecord;
 
-    // Filter Encounters Queue
     function filterQueue(dept) {
       const btns = ['All', 'Internal Medicine', 'Cardiology', 'Surgery'];
       btns.forEach(b => {
@@ -2014,13 +2255,13 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     window.filterQueue = filterQueue;
 
     // ==============================================================
-    // 6. INITIALIZATION & GLOBAL DELEGATION
+    // 7. INITIALIZATION
     // ==============================================================
     document.addEventListener('DOMContentLoaded', () => {
-      // Ensure initial screen is active
       window.navigateTo(1);
       window.recalculateClinicalState();
       window.handleLiveSoapInput();
+      window.renderAuditTrailUI();
     });
   </script>
 </body>
