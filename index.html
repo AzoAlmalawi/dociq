@@ -1772,21 +1772,21 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
 
     window.updateFinalRecordDisplay = window.updateStep7UI;
 
-    // ==============================================================
-    // 3. ACTIVE CLICK HANDLERS (STEP 3 INLINE ACTIONS)
+        // ==============================================================
+    // 3. MUTATION HANDLERS (EXACT REACTIVITY FIX)
     // ==============================================================
     window.handleInsertLabs = function() {
       const objText = document.getElementById('soapObjectiveText');
-      if (objText) {
-        const labText = "[Cerner LIS Biomarkers Aug 18: WBC 8.2 x10^9/L (from 14.1), CRP 6.5 mg/L (from 45.0, 85% reduction), Procalcitonin 0.11 ng/mL]";
-        if (!objText.value.includes(labText)) {
-          objText.value = objText.value.trim() + "\n\n" + labText;
-        }
+      const snippet = "
+
+Cerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Procalcitonin 0.11 ng/mL.";
+      if (objText && !objText.value.includes('Cerner LIS Batch')) {
+        objText.value = objText.value.trim() + snippet;
       }
 
       window.clinicalState.appliedLabs = true;
       window.recalculateClinicalState();
-      showToast('Cerner LIS Biomarkers Ingested (+10% Quality)', 'success');
+      showToast('Cerner LIS LOINC Biomarkers Ingested (+8% Quality)', 'success');
       window.handleLiveSoapInput();
     };
 
@@ -1795,12 +1795,14 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     window.handleClarifyAco = function() {
       const assessText = document.getElementById('soapAssessmentText');
       if (assessText) {
-        assessText.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO) - Specified (ICD-10 J44.9 / J45.30).\n3. Essential Hypertension - Blood pressure controlled.`;
+        assessText.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).
+2. Asthma-COPD Overlap (ACO - ICD-10 J44.9/J45.30) - Specified & Stable.
+3. Essential Hypertension - Blood pressure controlled.`;
       }
 
       window.clinicalState.appliedAco = true;
       window.recalculateClinicalState();
-      showToast('Diagnosis Specificity Refined to ACO (+8% Quality)', 'success');
+      showToast('Comorbidity Refined to ACO J44.9 (+8% Quality)', 'success');
       window.handleLiveSoapInput();
     };
 
@@ -1809,45 +1811,40 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     window.handleApplyPlan = function() {
       const planText = document.getElementById('soapPlanText');
       if (planText) {
-        planText.value = `• Step-down to oral antibiotics: Amoxicillin-Clavulanate 875/125mg PO BID.\n• Target total duration: 7-day stewardship target per ATS/IDSA guidelines.\n• Discharge planning initiated; continue room air monitoring.`;
+        planText.value = `- Step-down to Oral Amoxicillin-Clavulanate 875/125mg PO BID (Complete 4 days outpatient for 7-day total course).
+- Outpatient spirometry within 7 days post-discharge.`;
       }
 
       window.clinicalState.appliedPlan = true;
       window.recalculateClinicalState();
-      showToast('ATS/IDSA 7-Day Stewardship Plan Applied (+6% Quality)', 'success');
+      showToast('ATS/IDSA 7-Day Stewardship Plan Applied (+8% Quality)', 'success');
       window.handleLiveSoapInput();
     };
 
     window.applyStewardshipPlan = window.handleApplyPlan;
 
-    window.resetToRawDraft = function() {
-      window.clinicalState.appliedLabs = false;
-      window.clinicalState.appliedAco = false;
-      window.clinicalState.appliedPlan = false;
+    window.quickFillOptimalNote = function() {
+      const objText = document.getElementById('soapObjectiveText');
+      const assessText = document.getElementById('soapAssessmentText');
+      const planText = document.getElementById('soapPlanText');
 
-      const sSubj = document.getElementById('soapSubjectiveText');
-      if (sSubj) sSubj.value = `71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.`;
-      
-      const sObj = document.getElementById('soapObjectiveText');
-      if (sObj) sObj.value = `Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\nPhysical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.`;
-      
-      const sAssess = document.getElementById('soapAssessmentText');
-      if (sAssess) sAssess.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO) - Needs Diagnostic Refinement.\n3. Essential Hypertension - Blood pressure controlled.`;
-      
-      const sPlan = document.getElementById('soapPlanText');
-      if (sPlan) sPlan.value = `• Continue supportive inpatient care and serial vital signs monitoring.\n• Maintain supplemental oxygen PRN to keep SpO2 >= 94%.`;
+      if (objText) objText.value = `Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.
+Physical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.
+
+Cerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Procalcitonin 0.11 ng/mL.`;
+      if (assessText) assessText.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).
+2. Asthma-COPD Overlap (ACO - ICD-10 J44.9/J45.30) - Specified & Stable.
+3. Essential Hypertension - Blood pressure controlled.`;
+      if (planText) planText.value = `- Step-down to Oral Amoxicillin-Clavulanate 875/125mg PO BID (Complete 4 days outpatient for 7-day total course).
+- Outpatient spirometry within 7 days post-discharge.`;
+
+      window.clinicalState.appliedLabs = true;
+      window.clinicalState.appliedAco = true;
+      window.clinicalState.appliedPlan = true;
 
       window.recalculateClinicalState();
       window.handleLiveSoapInput();
-      showToast('Reset to Raw Physician Draft (68% Quality)', 'info');
-    };
-
-    window.quickFillOptimalNote = function() {
-      window.handleInsertLabs();
-      window.handleClarifyAco();
-      window.handleApplyPlan();
-      window.handleLiveSoapInput();
-      showToast('Optimal Clinical Protocol Applied (92% Quality / 89% Research)', 'success');
+      showToast('⚡ Quick-Fill Applied: Quality Elevated to 92% (Compliant)', 'success');
     };
 
     // Macros
