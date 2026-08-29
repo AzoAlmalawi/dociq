@@ -1464,9 +1464,9 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       let score = 68;
       let research = 72;
 
-      if (window.clinicalState.appliedLabs) { score += 10; research += 8; }
+      if (window.clinicalState.appliedLabs) { score += 8; research += 6; }
       if (window.clinicalState.appliedAco) { score += 8; research += 5; }
-      if (window.clinicalState.appliedPlan) { score += 6; research += 4; }
+      if (window.clinicalState.appliedPlan) { score += 8; research += 6; }
 
       window.clinicalState.score = Math.min(score, 92);
       window.clinicalState.researchScore = Math.min(research, 89);
