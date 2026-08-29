@@ -150,6 +150,55 @@
     </div>
   </header>
 
+  <!-- UNIVERSAL TOP STEPPER NAVIGATION BAR (Visible on All Screen Sizes) -->
+  <div class="bg-white border-b border-slate-200 sticky top-16 z-30 shadow-xs px-3 sm:px-6 py-2 overflow-x-auto no-scrollbar select-none">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-2 min-w-[720px] sm:min-w-0">
+      
+      <!-- Step 1 -->
+      <button onclick="navigateTo(1)" id="topStepBtn-1" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 shadow-2xs">
+        <span class="w-5 h-5 rounded-full bg-teal-700 text-white flex items-center justify-center text-[10px] shrink-0">1</span>
+        <span class="truncate">Encounters</span>
+      </button>
+
+      <!-- Step 2 -->
+      <button onclick="navigateTo(2)" id="topStepBtn-2" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent">
+        <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0">2</span>
+        <span class="truncate">Patient Record</span>
+      </button>
+
+      <!-- Step 3 -->
+      <button onclick="navigateTo(3)" id="topStepBtn-3" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent">
+        <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0">3</span>
+        <span class="truncate">Clinical Document</span>
+      </button>
+
+      <!-- Step 4 -->
+      <button onclick="navigateTo(4)" id="topStepBtn-4" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent">
+        <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0">4</span>
+        <span class="truncate">Clinical Review</span>
+      </button>
+
+      <!-- Step 5 -->
+      <button onclick="navigateTo(5)" id="topStepBtn-5" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent">
+        <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0">5</span>
+        <span class="truncate">AI CDS</span>
+      </button>
+
+      <!-- Step 6 -->
+      <button onclick="navigateTo(6)" id="topStepBtn-6" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent">
+        <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0">6</span>
+        <span class="truncate">Dual Scores</span>
+      </button>
+
+      <!-- Step 7 -->
+      <button onclick="navigateTo(7)" id="topStepBtn-7" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent">
+        <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0">7</span>
+        <span class="truncate">Finalize</span>
+      </button>
+
+    </div>
+  </div>
+
   <!-- MAIN WORKSPACE -->
   <div class="flex-1 flex overflow-hidden">
     
@@ -341,7 +390,16 @@
               <span>Open Clinical Document (Step 3)</span>
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
-          </div>
+          
+        <!-- Step 1 Prev/Next Navigation Controls -->
+        <div class="flex items-center justify-between gap-4 pt-6 border-t border-slate-200/80 mt-8 select-none">
+          <div></div>
+          
+          <div class="text-xs font-mono font-bold text-slate-400">Step 1 of 7</div>
+          
+          <button onclick="navigateTo(2)" class="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-soft"><span>Next Step (Patient Record) &rarr;</span></button>
+        </div>
+      </div>
 
           <!-- Fatima Al-Harbi -->
           <div class="card-hospital p-5 flex flex-col justify-between gap-4 patient-card" data-dept="Cardiology" data-name="Fatima Al-Harbi" data-mrn="990238">
@@ -488,7 +546,16 @@
             <span>Open Step 3: Clinical Document</span>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
           </button>
+        
+        <!-- Step 2 Prev/Next Navigation Controls -->
+        <div class="flex items-center justify-between gap-4 pt-6 border-t border-slate-200/80 mt-8 select-none">
+          <button onclick="navigateTo(1)" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-2xs"><span>&larr; Previous Step (Encounters Queue)</span></button>
+          
+          <div class="text-xs font-mono font-bold text-slate-400">Step 2 of 7</div>
+          
+          <button onclick="navigateTo(3)" class="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-soft"><span>Next Step (Clinical Document) &rarr;</span></button>
         </div>
+      </div>
 
         <!-- 4 Bedside Vitals Telemetry Cards -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -597,7 +664,16 @@
               <div class="text-[11px] text-slate-400 font-mono" id="wordCountDisplay">
                 Words: 110 • Characters: 742
               </div>
-            </div>
+            
+        <!-- Step 3 Prev/Next Navigation Controls -->
+        <div class="flex items-center justify-between gap-4 pt-6 border-t border-slate-200/80 mt-8 select-none">
+          <button onclick="navigateTo(2)" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-2xs"><span>&larr; Previous Step (Patient Record)</span></button>
+          
+          <div class="text-xs font-mono font-bold text-slate-400">Step 3 of 7</div>
+          
+          <button onclick="navigateTo(4)" class="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-soft"><span>Next Step (Clinical Review) &rarr;</span></button>
+        </div>
+      </div>
 
             <!-- 1. Subjective -->
             <div class="space-y-2">
@@ -935,6 +1011,15 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             <button onclick="handleApplyPlan()" class="px-3 py-1 rounded-lg text-[11px] font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs shrink-0 cursor-pointer">+ Apply Fix</button>
           </div>
         </div>
+      
+        <!-- Step 4 Prev/Next Navigation Controls -->
+        <div class="flex items-center justify-between gap-4 pt-6 border-t border-slate-200/80 mt-8 select-none">
+          <button onclick="navigateTo(3)" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-2xs"><span>&larr; Previous Step (Clinical Document)</span></button>
+          
+          <div class="text-xs font-mono font-bold text-slate-400">Step 4 of 7</div>
+          
+          <button onclick="navigateTo(5)" class="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-soft"><span>Next Step (AI Recommendations) &rarr;</span></button>
+        </div>
       </div>
 
       <!-- STEP 5: AI RECOMMENDATIONS & CDS -->
@@ -1031,7 +1116,16 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
                 <span>Customize Dose</span>
               </button>
             </div>
-          </div>
+          
+        <!-- Step 5 Prev/Next Navigation Controls -->
+        <div class="flex items-center justify-between gap-4 pt-6 border-t border-slate-200/80 mt-8 select-none">
+          <button onclick="navigateTo(4)" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-2xs"><span>&larr; Previous Step (Clinical Review)</span></button>
+          
+          <div class="text-xs font-mono font-bold text-slate-400">Step 5 of 7</div>
+          
+          <button onclick="navigateTo(6)" class="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-soft"><span>Next Step (Dual Scores) &rarr;</span></button>
+        </div>
+      </div>
 
           <!-- Card 2 -->
           <div class="card-hospital p-6 flex flex-col justify-between gap-5 border-t-4 border-t-teal-700 shadow-soft hover:shadow-soft-md transition-all">
@@ -1161,6 +1255,15 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
           <span>Finalize Record</span>
           <span>&rarr;</span>
         </button>
+      
+        <!-- Step 6 Prev/Next Navigation Controls -->
+        <div class="flex items-center justify-between gap-4 pt-6 border-t border-slate-200/80 mt-8 select-none">
+          <button onclick="navigateTo(5)" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-2xs"><span>&larr; Previous Step (AI Recommendations)</span></button>
+          
+          <div class="text-xs font-mono font-bold text-slate-400">Step 6 of 7</div>
+          
+          <button onclick="navigateTo(7)" class="px-5 py-2.5 rounded-xl bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-soft"><span>Next Step (Finalize Record) &rarr;</span></button>
+        </div>
       </div>
 
       <!-- Dual Grid Cards -->
@@ -1301,6 +1404,15 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
             <span>Sign & Save to EHR</span>
           </button>
+        </div>
+      
+        <!-- Step 7 Prev/Next Navigation Controls -->
+        <div class="flex items-center justify-between gap-4 pt-6 border-t border-slate-200/80 mt-8 select-none">
+          <button onclick="navigateTo(6)" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-2xs"><span>&larr; Previous Step (Dual Scores)</span></button>
+          
+          <div class="text-xs font-mono font-bold text-slate-400">Step 7 of 7</div>
+          
+          <button onclick="navigateTo(1)" class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-soft"><span>Back to Encounters Queue &rarr;</span></button>
         </div>
       </div>
 
@@ -1513,6 +1625,12 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         const target = Math.min(Math.max(Number(step) || 1, 1), 7);
         window.clinicalState.activeStep = target;
 
+        // Update URL hash for direct deep-linking and browser back/forward support
+        if (window.location.hash !== '#' + target && window.location.hash !== '#step-' + target) {
+          try { history.pushState(null, null, '#' + target); } catch(e) {}
+        }
+
+        // Toggle Screen Visibility
         for (let s = 1; s <= 7; s++) {
           const screenEl = document.getElementById('screen-' + s);
           if (screenEl) {
@@ -1526,6 +1644,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             }
           }
 
+          // Sidebar Button Highlight
           const sideBtn = document.getElementById('stepBtn-' + s);
           if (sideBtn) {
             const isActive = (s === target);
@@ -1533,14 +1652,21 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
               ? 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-sm'
               : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
           }
-        }
 
-          const sideBtn = document.getElementById('stepBtn-' + s);
-          if (sideBtn) {
+          // Top Stepper Button Highlight
+          const topBtn = document.getElementById('topStepBtn-' + s);
+          if (topBtn) {
             const isActive = (s === target);
-            sideBtn.className = isActive
-              ? 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-sm'
-              : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
+            topBtn.className = isActive
+              ? 'flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 shadow-2xs'
+              : 'flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent';
+            
+            const numSpan = topBtn.querySelector('span:first-child');
+            if (numSpan) {
+              numSpan.className = isActive
+                ? 'w-5 h-5 rounded-full bg-teal-700 text-white flex items-center justify-center text-[10px] shrink-0'
+                : 'w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0';
+            }
           }
         }
 
@@ -2412,8 +2538,21 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     // ==============================================================
     // 7. INITIALIZATION
     // ==============================================================
+    // URL Hash Listener for Browser Back/Forward and Direct Links (#1 to #7)
+    window.addEventListener('hashchange', () => {
+      const hash = window.location.hash.replace('#', '').replace('step-', '');
+      const stepNum = parseInt(hash, 10);
+      if (stepNum >= 1 && stepNum <= 7 && stepNum !== window.clinicalState.activeStep) {
+        window.navigateTo(stepNum);
+      }
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
-      window.navigateTo(1);
+      // Check initial hash in URL
+      const hash = window.location.hash.replace('#', '').replace('step-', '');
+      const initialStep = (parseInt(hash, 10) >= 1 && parseInt(hash, 10) <= 7) ? parseInt(hash, 10) : 1;
+      
+      window.navigateTo(initialStep);
       window.recalculateClinicalState();
       window.handleLiveSoapInput();
       window.renderAuditTrailUI();
