@@ -1397,7 +1397,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
   <!-- JAVASCRIPT LOGIC -->
   <script>
     // ==============================================================
-    // 1. GLOBAL REACTIVE STATE ARCHITECTURE
+    // 1. MASTER GLOBAL REACTIVE STATE ARCHITECTURE
     // ==============================================================
     window.clinicalState = {
       appliedLabs: false,
@@ -1411,375 +1411,420 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
     window.docPatchState = window.clinicalState;
     window.appScoreState = window.clinicalState;
 
-    window.navigateTo = function(step) {
-      const target = Math.min(Math.max(Number(step) || 1, 1), 7);
-      window.clinicalState.activeStep = target;
+    // Helper: Safely get element by multiple ID fallbacks
+    function getEl() {
+      for (let i = 0; i < arguments.length; i++) {
+        const id = arguments[i];
+        const el = document.getElementById(id);
+        if (el) return el;
+      }
+      return null;
+    }
 
-      for (let s = 1; s <= 7; s++) {
-        const screenEl = document.getElementById('screen-' + s);
-        if (screenEl) {
-          if (s === target) {
-            screenEl.style.display = 'block';
-            screenEl.classList.remove('hidden');
-          } else {
-            screenEl.style.display = 'none';
-            screenEl.classList.add('hidden');
+    // ==============================================================
+    // 2. BULLETPROOF NAVIGATION ROUTER (100% Zero-Latency)
+    // ==============================================================
+    window.navigateTo = function(step) {
+      try {
+        const target = Math.min(Math.max(Number(step) || 1, 1), 7);
+        window.clinicalState.activeStep = target;
+
+        for (let s = 1; s <= 7; s++) {
+          const screenEl = document.getElementById('screen-' + s);
+          if (screenEl) {
+            if (s === target) {
+              screenEl.style.display = 'block';
+              screenEl.classList.remove('hidden');
+              screenEl.removeAttribute('hidden');
+            } else {
+              screenEl.style.display = 'none';
+              screenEl.classList.add('hidden');
+            }
+          }
+
+          const sideBtn = document.getElementById('stepBtn-' + s);
+          if (sideBtn) {
+            const isActive = (s === target);
+            sideBtn.className = isActive
+              ? 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-sm'
+              : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
           }
         }
 
-        const sideBtn = document.getElementById('stepBtn-' + s);
-        if (sideBtn) {
-          const isActive = (s === target);
-          sideBtn.className = isActive
-            ? 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-soft'
-            : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
-        }
-      }
+        // Trigger updates safely with try/catch
+        try { if (typeof window.recalculateClinicalState === 'function') window.recalculateClinicalState(); } catch(e) { console.error(e); }
+        try { if (target === 4 && typeof window.renderStep4Checklist === 'function') window.renderStep4Checklist(); } catch(e) { console.error(e); }
+        try { if (target === 6 && typeof window.updateStep6UI === 'function') window.updateStep6UI(); } catch(e) { console.error(e); }
+        try { if (target === 7 && typeof window.updateStep7UI === 'function') window.updateStep7UI(); } catch(e) { console.error(e); }
 
-      if (target === 4 && typeof window.renderStep4Checklist === 'function') {
-        window.renderStep4Checklist();
+        const mainEl = document.querySelector('main');
+        if (mainEl) mainEl.scrollTop = 0;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) {
+        console.error("Navigation error:", err);
       }
-      if (target === 6 && typeof window.updateStep6UI === 'function') {
-        window.updateStep6UI();
-      }
-      if (target === 7 && typeof window.updateStep7UI === 'function') {
-        window.updateStep7UI();
-      }
-
-      const mainEl = document.querySelector('main');
-      if (mainEl) mainEl.scrollTop = 0;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    window.setStep = window.navigateTo;
-    window.setActiveTab = window.navigateTo;
+    // Navigation Aliases
     function navigateTo(step) { window.navigateTo(step); }
     function setStep(step) { window.navigateTo(step); }
     function setActiveTab(step) { window.navigateTo(step); }
+    function openStep(step) { window.navigateTo(step); }
+    window.setStep = window.navigateTo;
+    window.setActiveTab = window.navigateTo;
+    window.openStep = window.navigateTo;
 
     // ==============================================================
-    // 2. RECALCULATE CLINICAL STATE & TWO-WAY UI SYNC
+    // 3. RECALCULATE CLINICAL STATE & UI SYNC
     // ==============================================================
     window.recalculateClinicalState = function() {
-      let score = 68;
-      let research = 72;
+      try {
+        let score = 68;
+        let research = 72;
 
-      if (window.clinicalState.appliedLabs) { score += 8; research += 6; }
-      if (window.clinicalState.appliedAco) { score += 8; research += 5; }
-      if (window.clinicalState.appliedPlan) { score += 8; research += 6; }
+        if (window.clinicalState.appliedLabs) { score += 8; research += 6; }
+        if (window.clinicalState.appliedAco) { score += 8; research += 5; }
+        if (window.clinicalState.appliedPlan) { score += 8; research += 6; }
 
-      window.clinicalState.score = Math.min(score, 92);
-      window.clinicalState.researchScore = Math.min(research, 89);
+        window.clinicalState.score = Math.min(score, 92);
+        window.clinicalState.researchScore = Math.min(research, 89);
 
-      // Trigger UI updates across all components
-      window.updateStep1UI();
-      window.updateStep3UI();
-      window.updateStep4UI();
-      window.updateStep6UI();
-      window.updateStep7UI();
+        // Update all screens safely
+        window.updateStep1UI();
+        window.updateStep3UI();
+        window.updateStep4UI();
+        window.updateStep6UI();
+        window.updateStep7UI();
+      } catch (err) {
+        console.error("Recalculate error:", err);
+      }
     };
 
     window.updateGlobalScores = window.recalculateClinicalState;
 
     // Step 1 UI Update
     window.updateStep1UI = function() {
-      const q = window.clinicalState.score;
-      const r = window.clinicalState.researchScore;
+      try {
+        const q = window.clinicalState.score;
+        const r = window.clinicalState.researchScore;
 
-      const sCardQ = document.getElementById('sarahCardQualityScore');
-      if (sCardQ) sCardQ.innerText = Math.round(q) + '%';
-      const sCardR = document.getElementById('sarahCardResearchScore');
-      if (sCardR) sCardR.innerText = Math.round(r) + '%';
+        const sCardQ = getEl('sarahCardQualityScore', 'queueDocScore-1');
+        if (sCardQ) sCardQ.innerText = Math.round(q) + '%';
+        const sCardR = getEl('sarahCardResearchScore', 'queueResearchScore-1');
+        if (sCardR) sCardR.innerText = Math.round(r) + '%';
 
-      const asideQ = document.getElementById('asideQualityDisplay');
-      if (asideQ) asideQ.innerText = Math.round(q) + '%';
+        const qBar = getEl('queueDocBar-1');
+        if (qBar) qBar.style.width = q + '%';
+        const rBar = getEl('queueResearchBar-1');
+        if (rBar) rBar.style.width = r + '%';
+
+        const asideQ = getEl('asideQualityDisplay');
+        if (asideQ) asideQ.innerText = Math.round(q) + '%';
+      } catch (e) { console.error(e); }
     };
 
     // Step 3 UI Update
     window.updateStep3UI = function() {
-      const score = window.clinicalState.score;
-      
-      // Update Gauge Number
-      const numEl = document.getElementById('qualityScoreDisplay');
-      if (numEl) numEl.innerText = score + '%';
+      try {
+        const score = window.clinicalState.score;
+        const research = window.clinicalState.researchScore;
 
-      // Update Gauge SVG Arc with smooth animation and color shift
-      const arcEl = document.getElementById('qualityGaugeArc');
-      if (arcEl) {
-        const circumference = 251.32;
-        const offset = circumference * (1 - score / 100);
-        arcEl.style.strokeDashoffset = offset;
+        // Gauge Number
+        const numEl = getEl('qualityScoreDisplay', 'aiGaugeNumber');
+        if (numEl) numEl.innerText = score + '%';
 
-        if (score < 75) {
-          arcEl.setAttribute('stroke', '#D97706'); // Amber
-        } else if (score >= 75 && score < 90) {
-          arcEl.setAttribute('stroke', '#0D9488'); // Teal
-        } else {
-          arcEl.setAttribute('stroke', '#059669'); // Emerald
+        // Gauge Arc
+        const arcEl = getEl('qualityGaugeArc', 'gaugeCircleBorder');
+        if (arcEl) {
+          const circumference = 251.32;
+          const offset = circumference * (1 - score / 100);
+          arcEl.style.strokeDashoffset = offset;
+          if (score < 75) {
+            arcEl.setAttribute('stroke', '#D97706');
+          } else if (score >= 75 && score < 90) {
+            arcEl.setAttribute('stroke', '#0D9488');
+          } else {
+            arcEl.setAttribute('stroke', '#059669');
+          }
         }
-      }
 
-      // Update Status Badge
-      const badgeEl = document.getElementById('qualityStatusBadge');
-      if (badgeEl) {
-        if (score < 75) {
-          badgeEl.innerText = `${score}% (Needs Attention)`;
-          badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 transition-all';
-        } else if (score >= 75 && score < 90) {
-          badgeEl.innerText = `${score}% (In Review / Partial)`;
-          badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200 transition-all';
-        } else {
-          badgeEl.innerText = `${score}% (Excellent / Compliant)`;
-          badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all';
+        // Status Badge
+        const badgeEl = getEl('qualityStatusBadge', 'aiScoreBadge');
+        if (badgeEl) {
+          if (score < 75) {
+            badgeEl.innerText = `${score}% (Needs Attention)`;
+            badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 transition-all';
+          } else if (score >= 75 && score < 90) {
+            badgeEl.innerText = `${score}% (In Review / Partial)`;
+            badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-teal-50 text-teal-700 border border-teal-200 transition-all';
+          } else {
+            badgeEl.innerText = `${score}% (Excellent / Compliant)`;
+            badgeEl.className = 'text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 transition-all';
+          }
         }
-      }
 
-      // Update Points Breakdown
-      const ptsComp = document.getElementById('ptsCompleteness');
-      const ptsPrec = document.getElementById('ptsPrecision');
-      const ptsCons = document.getElementById('ptsConsistency');
-      const ptsStruc = document.getElementById('ptsStructure');
-      const ptsTot = document.getElementById('ptsTotal');
+        // Points Breakdown Matrix
+        const ptsComp = getEl('ptsCompleteness', 'weightCompleteness');
+        const ptsPrec = getEl('ptsPrecision', 'weightClarity');
+        const ptsCons = getEl('ptsConsistency', 'weightConsistency');
+        const ptsStruc = getEl('ptsStructure', 'weightOrg');
+        const ptsTot = getEl('ptsTotal');
 
-      if (ptsComp && ptsPrec && ptsCons && ptsStruc && ptsTot) {
         if (score <= 68) {
-          ptsComp.innerText = '29.09 pts (8/11)';
-          ptsPrec.innerText = '13.00 pts';
-          ptsCons.innerText = '12.00 pts';
-          ptsStruc.innerText = '14.00 pts';
-          ptsTot.innerText = '68.00 / 100';
-        } else if (score <= 78) {
-          ptsComp.innerText = '36.36 pts (10/11)';
-          ptsPrec.innerText = '18.00 pts';
-          ptsCons.innerText = '14.00 pts';
-          ptsStruc.innerText = '18.00 pts';
-          ptsTot.innerText = '78.00 / 100';
-        } else if (score <= 86) {
-          ptsComp.innerText = '36.36 pts (10/11)';
-          ptsPrec.innerText = '22.00 pts';
-          ptsCons.innerText = '18.00 pts';
-          ptsStruc.innerText = '20.00 pts';
-          ptsTot.innerText = '86.00 / 100';
+          if (ptsComp) ptsComp.innerText = '29.09 pts (8/11)';
+          if (ptsPrec) ptsPrec.innerText = '13.00 pts';
+          if (ptsCons) ptsCons.innerText = '12.00 pts';
+          if (ptsStruc) ptsStruc.innerText = '14.00 pts';
+          if (ptsTot) ptsTot.innerText = '68.00 / 100';
+        } else if (score <= 76) {
+          if (ptsComp) ptsComp.innerText = '32.72 pts (9/11)';
+          if (ptsPrec) ptsPrec.innerText = '15.33 pts';
+          if (ptsCons) ptsCons.innerText = '14.66 pts';
+          if (ptsStruc) ptsStruc.innerText = '16.00 pts';
+          if (ptsTot) ptsTot.innerText = '76.00 / 100';
+        } else if (score <= 84) {
+          if (ptsComp) ptsComp.innerText = '36.36 pts (10/11)';
+          if (ptsPrec) ptsPrec.innerText = '17.66 pts';
+          if (ptsCons) ptsCons.innerText = '17.33 pts';
+          if (ptsStruc) ptsStruc.innerText = '18.00 pts';
+          if (ptsTot) ptsTot.innerText = '84.00 / 100';
         } else {
-          ptsComp.innerText = '40.00 pts (11/11)';
-          ptsPrec.innerText = '25.00 pts';
-          ptsCons.innerText = '20.00 pts';
-          ptsStruc.innerText = '20.00 pts';
-          ptsTot.innerText = '92.00 / 100';
+          if (ptsComp) ptsComp.innerText = '40.00 pts (11/11)';
+          if (ptsPrec) ptsPrec.innerText = '20.00 pts';
+          if (ptsCons) ptsCons.innerText = '20.00 pts';
+          if (ptsStruc) ptsStruc.innerText = '20.00 pts';
+          if (ptsTot) ptsTot.innerText = '92.00 / 100';
         }
-      }
 
-      // Update Gaps Checklist
-      const pendingCount = (window.clinicalState.appliedLabs ? 0 : 1) + 
-                           (window.clinicalState.appliedAco ? 0 : 1) + 
-                           (window.clinicalState.appliedPlan ? 0 : 1);
-      
-      const gapsBadge = document.getElementById('gapsStatusBadge');
-      if (gapsBadge) {
-        gapsBadge.innerText = pendingCount === 0 ? 'All Compliant ✓' : `${pendingCount} Actions Pending`;
-        gapsBadge.className = pendingCount === 0 
-          ? 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800'
-          : 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800';
-      }
-
-      const gLabs = document.getElementById('gapItemLabs');
-      if (gLabs) {
-        gLabs.className = window.clinicalState.appliedLabs
-          ? 'p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/50 flex items-center justify-between text-xs'
-          : 'p-2.5 rounded-lg border border-amber-200 bg-amber-50/50 flex items-center justify-between text-xs';
-        gLabs.innerHTML = window.clinicalState.appliedLabs
-          ? '<span class="font-medium text-emerald-900">LOINC Biomarkers Ingestion</span><span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Verified ✓</span>'
-          : '<span class="font-medium text-amber-900">LOINC Biomarkers Ingestion</span><span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Action Pending</span>';
-      }
-
-      const gAco = document.getElementById('gapItemAco');
-      if (gAco) {
-        gAco.className = window.clinicalState.appliedAco
-          ? 'p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/50 flex items-center justify-between text-xs'
-          : 'p-2.5 rounded-lg border border-amber-200 bg-amber-50/50 flex items-center justify-between text-xs';
-        gAco.innerHTML = window.clinicalState.appliedAco
-          ? '<span class="font-medium text-emerald-900">ACO Comorbidity Specificity</span><span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Specified ✓</span>'
-          : '<span class="font-medium text-amber-900">ACO Comorbidity Specificity</span><span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Action Pending</span>';
-      }
-
-      const gPlan = document.getElementById('gapItemPlan');
-      if (gPlan) {
-        gPlan.className = window.clinicalState.appliedPlan
-          ? 'p-2.5 rounded-lg border border-emerald-200 bg-emerald-50/50 flex items-center justify-between text-xs'
-          : 'p-2.5 rounded-lg border border-amber-200 bg-amber-50/50 flex items-center justify-between text-xs';
-        gPlan.innerHTML = window.clinicalState.appliedPlan
-          ? '<span class="font-medium text-emerald-900">7-Day Stewardship Target</span><span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Validated ✓</span>'
-          : '<span class="font-medium text-amber-900">7-Day Stewardship Target</span><span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">Action Pending</span>';
-      }
-
-      // DOM-Level Banner Toggle (Labs)
-      const bLabsAmber = document.getElementById('bannerLabsAmber');
-      const bLabsGreen = document.getElementById('bannerLabsGreen');
-      const bObj = document.getElementById('badgeObjectiveStatus');
-      if (window.clinicalState.appliedLabs) {
-        if (bLabsAmber) bLabsAmber.style.display = 'none';
-        if (bLabsGreen) bLabsGreen.style.display = 'flex';
-        if (bObj) {
-          bObj.innerText = 'LOINC Labs Ingested';
-          bObj.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200';
+        // Update Gap Banners & Diff Views
+        // 1. Labs
+        const bLabsAmber = getEl('bannerLabsAmber', 'objBeforeBadge');
+        const bLabsGreen = getEl('bannerLabsGreen', 'objAfterBadge');
+        const objBadge = getEl('badgeObjectiveStatus', 'objectiveStatusBadge');
+        if (window.clinicalState.appliedLabs) {
+          if (bLabsAmber) bLabsAmber.style.display = 'none';
+          if (bLabsGreen) bLabsGreen.style.display = 'flex';
+          if (objBadge) {
+            objBadge.innerText = 'LOINC Biomarkers Ingested ✓';
+            objBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200';
+          }
+        } else {
+          if (bLabsAmber) bLabsAmber.style.display = 'flex';
+          if (bLabsGreen) bLabsGreen.style.display = 'none';
+          if (objBadge) {
+            objBadge.innerText = 'Pending Labs (WBC / CRP)';
+            objBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200';
+          }
         }
-      } else {
-        if (bLabsAmber) bLabsAmber.style.display = 'flex';
-        if (bLabsGreen) bLabsGreen.style.display = 'none';
-        if (bObj) {
-          bObj.innerText = 'Pending Labs';
-          bObj.className = 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200';
-        }
-      }
 
-      // DOM-Level Banner Toggle (ACO)
-      const bAcoAmber = document.getElementById('bannerAcoAmber');
-      const bAcoGreen = document.getElementById('bannerAcoGreen');
-      const bAssess = document.getElementById('badgeAssessmentStatus');
-      if (window.clinicalState.appliedAco) {
-        if (bAcoAmber) bAcoAmber.style.display = 'none';
-        if (bAcoGreen) bAcoGreen.style.display = 'flex';
-        if (bAssess) {
-          bAssess.innerText = 'ACO Specified';
-          bAssess.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200';
+        // 2. ACO
+        const bAcoAmber = getEl('bannerAcoAmber', 'assessBeforeBadge');
+        const bAcoGreen = getEl('bannerAcoGreen', 'assessAfterBadge');
+        const assessBadge = getEl('badgeAssessmentStatus', 'assessmentStatusBadge');
+        if (window.clinicalState.appliedAco) {
+          if (bAcoAmber) bAcoAmber.style.display = 'none';
+          if (bAcoGreen) bAcoGreen.style.display = 'flex';
+          if (assessBadge) {
+            assessBadge.innerText = 'ACO Specified (J44.9) ✓';
+            assessBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200';
+          }
+        } else {
+          if (bAcoAmber) bAcoAmber.style.display = 'flex';
+          if (bAcoGreen) bAcoGreen.style.display = 'none';
+          if (assessBadge) {
+            assessBadge.innerText = 'Needs Specificity';
+            assessBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200';
+          }
         }
-      } else {
-        if (bAcoAmber) bAcoAmber.style.display = 'flex';
-        if (bAcoGreen) bAcoGreen.style.display = 'none';
-        if (bAssess) {
-          bAssess.innerText = 'Needs Specificity';
-          bAssess.className = 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200';
-        }
-      }
 
-      // DOM-Level Banner Toggle (Plan)
-      const bPlanAmber = document.getElementById('bannerPlanAmber');
-      const bPlanGreen = document.getElementById('bannerPlanGreen');
-      const bPlan = document.getElementById('badgePlanStatus');
-      if (window.clinicalState.appliedPlan) {
-        if (bPlanAmber) bPlanAmber.style.display = 'none';
-        if (bPlanGreen) bPlanGreen.style.display = 'flex';
-        if (bPlan) {
-          bPlan.innerText = '7-Day Plan Set';
-          bPlan.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200';
+        // 3. Plan
+        const bPlanAmber = getEl('bannerPlanAmber', 'planBeforeBadge');
+        const bPlanGreen = getEl('bannerPlanGreen', 'planAfterBadge');
+        const planBadge = getEl('badgePlanStatus', 'planStatusBadge');
+        if (window.clinicalState.appliedPlan) {
+          if (bPlanAmber) bPlanAmber.style.display = 'none';
+          if (bPlanGreen) bPlanGreen.style.display = 'flex';
+          if (planBadge) {
+            planBadge.innerText = '7-Day Stewardship Set ✓';
+            planBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200';
+          }
+        } else {
+          if (bPlanAmber) bPlanAmber.style.display = 'flex';
+          if (bPlanGreen) bPlanGreen.style.display = 'none';
+          if (planBadge) {
+            planBadge.innerText = 'Unspecified Duration';
+            planBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200';
+          }
         }
-      } else {
-        if (bPlanAmber) bPlanAmber.style.display = 'flex';
-        if (bPlanGreen) bPlanGreen.style.display = 'none';
-        if (bPlan) {
-          bPlan.innerText = 'Unspecified Duration';
-          bPlan.className = 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200';
+
+        // Update Gap Counters
+        let pending = 0;
+        if (!window.clinicalState.appliedLabs) pending++;
+        if (!window.clinicalState.appliedAco) pending++;
+        if (!window.clinicalState.appliedPlan) pending++;
+
+        const gapsBadge = getEl('gapsStatusBadge', 'gapsCountBadge');
+        if (gapsBadge) {
+          if (pending === 0) {
+            gapsBadge.innerText = 'All Resolved ✓';
+            gapsBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+          } else {
+            gapsBadge.innerText = `${pending} Actions Pending`;
+            gapsBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800';
+          }
         }
-      }
+
+        window.handleLiveSoapInput();
+      } catch (e) { console.error(e); }
     };
 
-    // Step 4 UI Update
+    // Live Word & Character Counter
+    window.handleLiveSoapInput = function() {
+      try {
+        const sSubj = getEl('soapSubjectiveText', 'subjectiveTextarea')?.value || '';
+        const sObj = getEl('soapObjectiveText', 'objectiveTextarea')?.value || '';
+        const sAssess = getEl('soapAssessmentText', 'assessmentTextarea')?.value || '';
+        const sPlan = getEl('soapPlanText', 'planTextarea')?.value || '';
+
+        const fullText = (sSubj + ' ' + sObj + ' ' + sAssess + ' ' + sPlan).trim();
+        const wordCount = fullText ? fullText.split(/\s+/).length : 0;
+        const charCount = fullText.length;
+
+        const counterEl = getEl('soapStatsCounter', 'wordCountDisplay');
+        if (counterEl) {
+          counterEl.innerText = `${wordCount} words • ${charCount} chars`;
+        }
+      } catch (e) { console.error(e); }
+    };
+
+    // Step 4 UI Update (Checklist)
     window.updateStep4UI = function() {
-      if (typeof window.renderStep4Checklist === 'function') {
-        window.renderStep4Checklist();
-      }
+      try {
+        if (typeof window.renderStep4Checklist === 'function') {
+          window.renderStep4Checklist();
+        }
+      } catch (e) { console.error(e); }
     };
 
-    // Step 6 UI Update
+    window.renderStep4Checklist = function() {
+      try {
+        const grid = document.getElementById('checklistDetailedList');
+        if (!grid) return;
+
+        const labsOk = !!window.clinicalState.appliedLabs;
+        const acoOk = !!window.clinicalState.appliedAco;
+        const planOk = !!window.clinicalState.appliedPlan;
+
+        const items = [
+          { label: '1. Patient Demographics & Age', ok: true, desc: 'Validated with EHR Registry (Sarah Al-Otaibi, 71y, MRN 882934).' },
+          { label: '2. Chief Complaint', ok: true, desc: 'Documented pleuritic chest pain & productive cough.' },
+          { label: '3. History of Present Illness (HPI)', ok: true, desc: 'Day 3 interval symptom review & resolution trajectory.' },
+          { label: '4. Review of Systems (ROS)', ok: true, desc: 'Negative for chills, fever resolved >24h.' },
+          { label: '5. Inpatient Active Medications', ok: true, desc: 'IV Ceftriaxone, Losartan 50mg, Albuterol.' },
+          { label: '6. Allergy Assessment', ok: true, desc: 'No Known Drug Allergies (NKDA) confirmed.' },
+          { label: '7. Physical Exam & Lung Sounds', ok: true, desc: 'Light end-inspiratory crackles RLL documented.' },
+          { label: '8. Bedside Vitals Telemetry', ok: true, desc: 'BP 118/74, Temp 37.1 C, HR 78, SpO2 98% room air.' },
+          { label: '9. Inflammatory Biomarkers (WBC / CRP)', ok: labsOk, desc: 'Cerner LIS LOINC WBC 8.2 x10^9/L & CRP 6.5 mg/L.', fn: 'handleInsertLabs()' },
+          { label: '10. Comorbidity Specificity (ACO J44.9)', ok: acoOk, desc: 'Asthma-COPD Overlap ICD-10 precision.', fn: 'handleClarifyAco()' },
+          { label: '11. Antimicrobial Stewardship Plan', ok: planOk, desc: 'Oral Amoxicillin-Clavulanate 875/125mg BID 7-day target.', span: true, fn: 'handleApplyPlan()' }
+        ];
+
+        grid.innerHTML = items.map(item => `
+          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex items-center justify-between border-l-4 transition-all ${item.span ? 'md:col-span-2' : ''} ${item.ok ? 'border-l-emerald-600' : 'border-l-amber-500 bg-amber-50/20'}">
+            <div class="space-y-0.5 pr-3">
+              <h4 class="text-xs font-bold text-slate-900">${item.label}</h4>
+              <p class="text-[11px] text-slate-500">${item.desc}</p>
+            </div>
+            ${item.ok
+              ? `<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">Compliant ✓</span>`
+              : `<button onclick="${item.fn}" class="px-3 py-1 rounded-lg text-[11px] font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs shrink-0 cursor-pointer">+ Apply Fix</button>`
+            }
+          </div>
+        `).join('');
+      } catch (e) { console.error(e); }
+    };
+
+    // Step 6 UI Update (Dual Scoring)
     window.updateStep6UI = function() {
-      const q = window.clinicalState.score;
-      const r = window.clinicalState.researchScore;
+      try {
+        const q = window.clinicalState.score;
+        const r = window.clinicalState.researchScore;
 
-      const qBadge = document.getElementById('step6QualityBadge');
-      if (qBadge) {
-        if (q < 75) {
-          qBadge.innerText = `${Math.round(q)}% - Action Required`;
-          qBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full transition-all';
-        } else if (q >= 75 && q < 90) {
-          qBadge.innerText = `${Math.round(q)}% - In Review`;
-          qBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-full transition-all';
-        } else {
-          qBadge.innerText = `${Math.round(q)}% - Excellent`;
-          qBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full transition-all';
+        const qBadge = document.getElementById('step6QualityBadge');
+        if (qBadge) {
+          if (q < 75) {
+            qBadge.innerText = `${Math.round(q)}% - Action Required`;
+            qBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full font-mono';
+          } else if (q < 90) {
+            qBadge.innerText = `${Math.round(q)}% - Partially Compliant`;
+            qBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-teal-500/20 text-teal-300 border border-teal-500/30 rounded-full font-mono';
+          } else {
+            qBadge.innerText = `${Math.round(q)}% - Compliant & Validated`;
+            qBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full font-mono';
+          }
         }
-      }
 
-      const rBadge = document.getElementById('step6ResearchBadge');
-      if (rBadge) {
-        if (r < 80) {
-          rBadge.innerText = `${Math.round(r)}% - Moderate`;
-          rBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-full transition-all';
-        } else {
-          rBadge.innerText = `${Math.round(r)}% - Very Good`;
-          rBadge.className = 'text-xs font-semibold px-2.5 py-1 bg-emerald-400/20 text-emerald-300 border border-emerald-400/30 rounded-full transition-all';
+        const rBadge = document.getElementById('step6ResearchBadge');
+        if (rBadge) {
+          rBadge.innerText = `${Math.round(r)}% - Research Ready`;
         }
-      }
+      } catch (e) { console.error(e); }
     };
 
-    // Step 7 UI Update (Live Synchronized Display)
+    // Step 7 UI Update (Finalize Record Preview)
     window.updateStep7UI = function() {
-      const sSubj = document.getElementById('soapSubjectiveText')?.value || '';
-      const sObj = document.getElementById('soapObjectiveText')?.value || '';
-      const sAssess = document.getElementById('soapAssessmentText')?.value || '';
-      const sPlan = document.getElementById('soapPlanText')?.value || '';
+      try {
+        const sSubj = getEl('soapSubjectiveText', 'subjectiveTextarea')?.value || `71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.`;
+        const sObj = getEl('soapObjectiveText', 'objectiveTextarea')?.value || `Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\nPhysical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.`;
+        const sAssess = getEl('soapAssessmentText', 'assessmentTextarea')?.value || `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Mild Asthma - Stable.\n3. Essential Hypertension - Blood pressure controlled.`;
+        const sPlan = getEl('soapPlanText', 'planTextarea')?.value || `• Continue supportive inpatient care and serial vital signs monitoring.\n• Maintain supplemental oxygen PRN to keep SpO2 >= 94%.`;
 
-      const dSubj = document.getElementById('step7SubjectiveDisplay');
-      if (dSubj) dSubj.innerText = sSubj;
-      const dObj = document.getElementById('step7ObjectiveDisplay');
-      if (dObj) dObj.innerText = sObj;
-      const dAssess = document.getElementById('step7AssessmentDisplay');
-      if (dAssess) dAssess.innerText = sAssess;
-      const dPlan = document.getElementById('step7PlanDisplay');
-      if (dPlan) dPlan.innerText = sPlan;
+        const dSubj = document.getElementById('step7SubjectiveDisplay');
+        const dObj = document.getElementById('step7ObjectiveDisplay');
+        const dAssess = document.getElementById('step7AssessmentDisplay');
+        const dPlan = document.getElementById('step7PlanDisplay');
 
-      // Badges
-      const bObj = document.getElementById('step7ObjectiveBadge');
-      if (bObj) {
-        bObj.innerText = window.clinicalState.appliedLabs ? 'LOINC Labs Linked ✓' : 'Pending LOINC Labs';
-        bObj.className = window.clinicalState.appliedLabs 
-          ? 'text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded' 
-          : 'text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded';
-      }
+        if (dSubj) dSubj.innerText = sSubj;
+        if (dObj) dObj.innerText = sObj;
+        if (dAssess) dAssess.innerText = sAssess;
+        if (dPlan) dPlan.innerText = sPlan;
 
-      const bAssess = document.getElementById('step7AssessmentBadge');
-      if (bAssess) {
-        bAssess.innerText = window.clinicalState.appliedAco ? 'ACO Specified ✓' : 'Needs Specificity';
-        bAssess.className = window.clinicalState.appliedAco 
-          ? 'text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded' 
-          : 'text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded';
-      }
+        const bObj = document.getElementById('step7ObjectiveBadge');
+        const bAssess = document.getElementById('step7AssessmentBadge');
+        const bPlan = document.getElementById('step7PlanBadge');
 
-      const bPlan = document.getElementById('step7PlanBadge');
-      if (bPlan) {
-        bPlan.innerText = window.clinicalState.appliedPlan ? '7-Day Target Validated ✓' : 'Unspecified Duration';
-        bPlan.className = window.clinicalState.appliedPlan 
-          ? 'text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded' 
-          : 'text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded';
-      }
+        if (bObj) {
+          bObj.innerText = window.clinicalState.appliedLabs ? 'Biomarkers Included' : 'Pending Labs';
+          bObj.className = window.clinicalState.appliedLabs
+            ? 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200'
+            : 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200';
+        }
 
-      const q = window.clinicalState.score;
-      const qEl = document.getElementById('finalAttestQuality');
-      if (qEl) qEl.innerText = `${Math.round(q)}% Documentation Quality`;
+        if (bAssess) {
+          bAssess.innerText = window.clinicalState.appliedAco ? 'ACO Specific (J44.9)' : 'Unspecified Asthma';
+          bAssess.className = window.clinicalState.appliedAco
+            ? 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200'
+            : 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200';
+        }
 
-      const headerBadge = document.getElementById('finalHeaderBadge');
-      if (headerBadge) {
-        headerBadge.innerText = q >= 90 ? 'Ready for Signature • 92%' : `Draft Status • ${Math.round(q)}%`;
-        headerBadge.className = q >= 90 
-          ? 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200'
-          : 'px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200';
-      }
+        if (bPlan) {
+          bPlan.innerText = window.clinicalState.appliedPlan ? '7-Day Stewardship' : 'Open Duration';
+          bPlan.className = window.clinicalState.appliedPlan
+            ? 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200'
+            : 'text-[10px] font-bold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200';
+        }
 
-      const metCount = 8 + (window.clinicalState.appliedLabs ? 1 : 0) + (window.clinicalState.appliedAco ? 1 : 0) + (window.clinicalState.appliedPlan ? 1 : 0);
-      const gapCount = 11 - metCount;
-      const critEl = document.getElementById('finalAttestCriteriaMet');
-      if (critEl) critEl.innerText = `${metCount}/11 Criteria Met • ${gapCount} Gaps`;
+        const fQuality = document.getElementById('finalAttestQuality');
+        if (fQuality) fQuality.innerText = Math.round(window.clinicalState.score) + '%';
+      } catch (e) { console.error(e); }
     };
 
-    window.updateFinalRecordDisplay = window.updateStep7UI;
-
-        // ==============================================================
-    // 3. MUTATION HANDLERS (EXACT REACTIVITY FIX)
+    // ==============================================================
+    // 4. ACTIVE CLICK MUTATION HANDLERS (STEP 3 PATCHES)
     // ==============================================================
     window.handleInsertLabs = function() {
-      const objText = document.getElementById('soapObjectiveText');
-      const snippet = "
-
-Cerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Procalcitonin 0.11 ng/mL.";
+      const objText = getEl('soapObjectiveText', 'objectiveTextarea');
+      const snippet = "\n\nCerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Procalcitonin 0.11 ng/mL.";
       if (objText && !objText.value.includes('Cerner LIS Batch')) {
         objText.value = objText.value.trim() + snippet;
       }
@@ -1790,14 +1835,13 @@ Cerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Pro
       window.handleLiveSoapInput();
     };
 
+    window.acceptLabIngestion = window.handleInsertLabs;
     window.insertCernerLabs = window.handleInsertLabs;
 
     window.handleClarifyAco = function() {
-      const assessText = document.getElementById('soapAssessmentText');
+      const assessText = getEl('soapAssessmentText', 'assessmentTextarea');
       if (assessText) {
-        assessText.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).
-2. Asthma-COPD Overlap (ACO - ICD-10 J44.9/J45.30) - Specified & Stable.
-3. Essential Hypertension - Blood pressure controlled.`;
+        assessText.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO - ICD-10 J44.9/J45.30) - Specified & Stable.\n3. Essential Hypertension - Blood pressure controlled.`;
       }
 
       window.clinicalState.appliedAco = true;
@@ -1806,13 +1850,13 @@ Cerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Pro
       window.handleLiveSoapInput();
     };
 
+    window.acceptAcoSpecificity = window.handleClarifyAco;
     window.clarifyAcoSpecificity = window.handleClarifyAco;
 
     window.handleApplyPlan = function() {
-      const planText = document.getElementById('soapPlanText');
+      const planText = getEl('soapPlanText', 'planTextarea');
       if (planText) {
-        planText.value = `- Step-down to Oral Amoxicillin-Clavulanate 875/125mg PO BID (Complete 4 days outpatient for 7-day total course).
-- Outpatient spirometry within 7 days post-discharge.`;
+        planText.value = `- Step-down to Oral Amoxicillin-Clavulanate 875/125mg PO BID (Complete 4 days outpatient for 7-day total course).\n- Outpatient spirometry within 7 days post-discharge.`;
       }
 
       window.clinicalState.appliedPlan = true;
@@ -1821,22 +1865,17 @@ Cerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Pro
       window.handleLiveSoapInput();
     };
 
+    window.acceptStewardshipPlan = window.handleApplyPlan;
     window.applyStewardshipPlan = window.handleApplyPlan;
 
     window.quickFillOptimalNote = function() {
-      const objText = document.getElementById('soapObjectiveText');
-      const assessText = document.getElementById('soapAssessmentText');
-      const planText = document.getElementById('soapPlanText');
+      const objText = getEl('soapObjectiveText', 'objectiveTextarea');
+      const assessText = getEl('soapAssessmentText', 'assessmentTextarea');
+      const planText = getEl('soapPlanText', 'planTextarea');
 
-      if (objText) objText.value = `Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.
-Physical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.
-
-Cerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Procalcitonin 0.11 ng/mL.`;
-      if (assessText) assessText.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).
-2. Asthma-COPD Overlap (ACO - ICD-10 J44.9/J45.30) - Specified & Stable.
-3. Essential Hypertension - Blood pressure controlled.`;
-      if (planText) planText.value = `- Step-down to Oral Amoxicillin-Clavulanate 875/125mg PO BID (Complete 4 days outpatient for 7-day total course).
-- Outpatient spirometry within 7 days post-discharge.`;
+      if (objText) objText.value = `Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\nPhysical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.\n\nCerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Procalcitonin 0.11 ng/mL.`;
+      if (assessText) assessText.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO - ICD-10 J44.9/J45.30) - Specified & Stable.\n3. Essential Hypertension - Blood pressure controlled.`;
+      if (planText) planText.value = `- Step-down to Oral Amoxicillin-Clavulanate 875/125mg PO BID (Complete 4 days outpatient for 7-day total course).\n- Outpatient spirometry within 7 days post-discharge.`;
 
       window.clinicalState.appliedLabs = true;
       window.clinicalState.appliedAco = true;
@@ -1847,19 +1886,40 @@ Cerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Pro
       showToast('⚡ Quick-Fill Applied: Quality Elevated to 92% (Compliant)', 'success');
     };
 
-    // Macros
+    window.resetToRawDraft = function() {
+      const subjText = getEl('soapSubjectiveText', 'subjectiveTextarea');
+      const objText = getEl('soapObjectiveText', 'objectiveTextarea');
+      const assessText = getEl('soapAssessmentText', 'assessmentTextarea');
+      const planText = getEl('soapPlanText', 'planTextarea');
+
+      if (subjText) subjText.value = `71-year-old female admitted for pneumonia with history of mild asthma. Today reports feeling better, cough is improving, and pleuritic chest pain has decreased. No fevers reported in the last 24 hours.`;
+      if (objText) objText.value = `Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\nPhysical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.`;
+      if (assessText) assessText.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Mild Asthma - Stable.\n3. Essential Hypertension - Blood pressure controlled.`;
+      if (planText) planText.value = `• Continue supportive inpatient care and serial vital signs monitoring.\n• Maintain supplemental oxygen PRN to keep SpO2 >= 94%.`;
+
+      window.clinicalState.appliedLabs = false;
+      window.clinicalState.appliedAco = false;
+      window.clinicalState.appliedPlan = false;
+
+      window.recalculateClinicalState();
+      window.handleLiveSoapInput();
+      showToast('↺ Reset to Raw Physician Draft (68% Quality)', 'info');
+    };
+
     window.insertMacro = function(macro) {
       if (macro === '.vitals') {
-        const objText = document.getElementById('soapObjectiveText');
-        if (objText && !objText.value.includes('BP 118/74')) {
-          objText.value = 'Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\n' + objText.value;
+        const obj = getEl('soapObjectiveText', 'objectiveTextarea');
+        if (obj) {
+          obj.value = `Vitals (Day 3): Temp: 37.1 °C, BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\n` + obj.value;
+          showToast('Telemetry Vitals appended', 'info');
         }
       } else if (macro === '.labs') {
         window.handleInsertLabs();
       } else if (macro === '.curb65') {
-        const subj = document.getElementById('soapSubjectiveText');
-        if (subj && !subj.value.includes('CURB-65')) {
-          subj.value += '\n• Severity Score: CURB-65 = 1 (Age 71, low risk, eligible for step-down).';
+        const subj = getEl('soapSubjectiveText', 'subjectiveTextarea');
+        if (subj) {
+          subj.value += `\n• Severity Score: CURB-65 = 1 (Age 71, Low Risk).`;
+          showToast('CURB-65 calculation appended', 'info');
         }
       } else if (macro === '.stewardship') {
         window.handleApplyPlan();
@@ -1867,164 +1927,100 @@ Cerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Pro
       window.handleLiveSoapInput();
     };
 
-    window.handleLiveSoapInput = function() {
-      const sSubj = document.getElementById('soapSubjectiveText')?.value || '';
-      const sObj = document.getElementById('soapObjectiveText')?.value || '';
-      const sAssess = document.getElementById('soapAssessmentText')?.value || '';
-      const sPlan = document.getElementById('soapPlanText')?.value || '';
-
-      const s = sSubj + ' ' + sObj + ' ' + sAssess + ' ' + sPlan;
-      const words = s.trim() ? s.trim().split(/\s+/).length : 0;
-      const chars = s.length;
-      const counterEl = document.getElementById('soapStatsCounter');
-      if (counterEl) {
-        counterEl.innerText = `${words} words • ${chars} chars`;
-      }
-
-      // Two-Way Sync to Step 7
-      window.updateStep7UI();
+    window.handleProceedStep4 = function() {
+      window.navigateTo(4);
     };
 
-    // Step 4 CAP Checklist Renderer
-    window.renderStep4Checklist = function() {
-      const grid = document.getElementById('checklistDetailedList');
-      if (!grid) return;
-
-      const labsOk = !!window.clinicalState.appliedLabs;
-      const acoOk = !!window.clinicalState.appliedAco;
-      const planOk = !!window.clinicalState.appliedPlan;
-
-      const items = [
-        { label: '1. Patient Demographics & Age', ok: true, desc: 'Validated with EHR Registry (Sarah Al-Otaibi, 71y, MRN 882934).' },
-        { label: '2. Chief Complaint', ok: true, desc: 'Documented pleuritic chest pain & productive cough.' },
-        { label: '3. History of Present Illness (HPI)', ok: true, desc: 'Day 3 interval symptom review & resolution trajectory.' },
-        { label: '4. Review of Systems (ROS)', ok: true, desc: 'Negative for chills, fever resolved >24h.' },
-        { label: '5. Inpatient Active Medications', ok: true, desc: 'IV Ceftriaxone, Losartan 50mg, Albuterol.' },
-        { label: '6. Allergy Assessment', ok: true, desc: 'No Known Drug Allergies (NKDA) confirmed.' },
-        { label: '7. Physical Exam & Lung Sounds', ok: true, desc: 'Light end-inspiratory crackles RLL documented.' },
-        { label: '8. Bedside Vitals Telemetry', ok: true, desc: 'BP 118/74, Temp 37.1 C, HR 78, SpO2 98% room air.' },
-        { label: '9. Inflammatory Biomarkers (WBC / CRP)', ok: labsOk, desc: 'Cerner LIS LOINC WBC 8.2 x10^9/L & CRP 6.5 mg/L.' },
-        { label: '10. Comorbidity Specificity (ACO J44.9)', ok: acoOk, desc: 'Asthma-COPD Overlap ICD-10 precision.' },
-        { label: '11. Antimicrobial Stewardship Plan', ok: planOk, desc: 'Oral Amoxicillin-Clavulanate 875/125mg BID 7-day target.', span: true }
-      ];
-
-      const completedCount = items.filter(i => i.ok).length;
-      const pct = Math.round((completedCount / 11) * 100);
-
-      const sumText = document.getElementById('ckSummaryText');
-      if (sumText) sumText.innerText = `${completedCount} / 11 Completed (${pct}%)`;
-      const sumBar = document.getElementById('ckSummaryBar');
-      if (sumBar) {
-        sumBar.style.width = `${pct}%`;
-        sumBar.className = completedCount === 11 
-          ? 'h-full bg-emerald-600 transition-all duration-500 rounded-full' 
-          : 'h-full bg-amber-500 transition-all duration-500 rounded-full';
-      }
-
-      grid.innerHTML = items.map(item => `
-        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex items-center justify-between border-l-4 transition-all ${item.span ? 'md:col-span-2' : ''} ${item.ok ? 'border-l-emerald-600' : 'border-l-amber-500 bg-amber-50/20'}">
-          <div class="space-y-0.5 pr-3">
-            <h4 class="text-xs font-bold text-slate-900">${item.label}</h4>
-            <p class="text-[11px] text-slate-500">${item.desc}</p>
-          </div>
-          <span class="px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 ${item.ok ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-300'}">
-            ${item.ok ? 'Compliant ✓' : 'Action Required'}
-          </span>
-        </div>
-      `).join('');
-    };
-
-    // Save Final Record
-    window.saveFinalRecord = function() {
-      showToast('Document Cryptographically Signed & Saved to EHR ✓', 'success');
-      setTimeout(() => {
-        alert('EHR Commit Success!\n\nSarah Al-Otaibi progress note signed by Dr. Mohammed.\nFHIR R4 Bundle broadcasted to hospital HIE network.');
-      }, 300);
-    };
-
-    // Toast Notification System
-    window.showToast = function(message, type = 'info') {
-      const existing = document.getElementById('appToastBox');
-      if (existing) existing.remove();
+    // ==============================================================
+    // 5. TOAST & MODAL UTILITIES
+    // ==============================================================
+    function showToast(msg, type = 'info') {
+      const container = getEl('toastContainer', 'appToastBox');
+      if (!container) return;
 
       const toast = document.createElement('div');
-      toast.id = 'appToastBox';
-      toast.className = `fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg font-semibold text-xs text-white transition-all transform duration-300 flex items-center gap-2 ${
-        type === 'success' ? 'bg-emerald-700' : type === 'error' ? 'bg-rose-700' : 'bg-slate-900'
-      }`;
-      toast.innerHTML = `<span>${message}</span>`;
-      document.body.appendChild(toast);
+      toast.className = 'px-4 py-3 bg-slate-900 text-white rounded-xl shadow-xl flex items-center gap-3 border border-slate-700 text-xs font-semibold animate-bounce';
+      toast.innerHTML = `<span class="w-2 h-2 rounded-full ${type === 'success' ? 'bg-emerald-400' : 'bg-teal-400'}"></span><span>${msg}</span>`;
+      container.appendChild(toast);
 
       setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(8px)';
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
-    };
+        toast.remove();
+      }, 3200);
+    }
 
-    // FHIR R4 Bundle Modal
-    window.openFhirModal = function() {
-      const existing = document.getElementById('fhirModalBox');
-      if (existing) existing.remove();
+    window.showToast = showToast;
 
-      const fhirData = {
-        resourceType: "Bundle",
-        type: "document",
-        timestamp: new Date().toISOString(),
-        entry: [
-          {
-            resource: {
-              resourceType: "Patient",
-              id: "882934",
-              name: [{ family: "Al-Otaibi", given: ["Sarah"] }],
-              gender: "female",
-              birthDate: "1955-03-12"
-            }
-          },
-          {
-            resource: {
-              resourceType: "Composition",
-              status: "final",
-              type: { coding: [{ system: "http://loinc.org", code: "11488-4", display: "Consultation Note" }] },
-              title: "Inpatient Progress Note & Antimicrobial Stewardship Order"
-            }
-          },
-          {
-            resource: {
-              resourceType: "Condition",
-              code: { coding: [{ system: "http://hl7.org/fhir/sid/icd-10-cm", code: "J13", display: "Pneumonia due to Streptococcus pneumoniae" }] }
-            }
+    function openModal(id) {
+      const m = document.getElementById(id);
+      if (m) {
+        m.classList.remove('hidden');
+        m.style.display = 'flex';
+      }
+    }
+
+    function closeModal(id) {
+      const m = document.getElementById(id);
+      if (m) {
+        m.classList.add('hidden');
+        m.style.display = 'none';
+      }
+    }
+
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+
+    function openFhirModal() {
+      openModal('fhirModal');
+    }
+
+    function closeFhirModal() {
+      closeModal('fhirModal');
+    }
+
+    window.openFhirModal = openFhirModal;
+    window.closeFhirModal = closeFhirModal;
+
+    function copyFhirJson() {
+      const fhirText = getEl('fhirPreBlock')?.innerText || '{}';
+      navigator.clipboard.writeText(fhirText).then(() => {
+        showToast('FHIR R4 JSON copied to clipboard', 'success');
+      });
+    }
+
+    window.copyFhirJson = copyFhirJson;
+
+    function saveFinalRecord() {
+      showToast('✓ Cryptographically Signed & Committed to Cerner EHR', 'success');
+    }
+
+    window.saveFinalRecord = saveFinalRecord;
+
+    // Filter Encounters Queue
+    function filterQueue(dept) {
+      const btns = ['All', 'Internal Medicine', 'Cardiology', 'Surgery'];
+      btns.forEach(b => {
+        const btn = document.getElementById('filterBtn-' + b);
+        if (btn) {
+          if (b === dept) {
+            btn.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200';
+          } else {
+            btn.className = 'px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-50';
           }
-        ]
-      };
+        }
+      });
+      showToast(`Filter applied: ${dept}`);
+    }
 
-      const modal = document.createElement('div');
-      modal.id = 'fhirModalBox';
-      modal.className = 'fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4';
-      modal.innerHTML = `
-        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
-          <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-black bg-teal-500 text-slate-950 px-2 py-0.5 rounded">HL7 FHIR R4</span>
-              <h3 class="font-bold text-sm">Interoperability Bundle Payload</h3>
-            </div>
-            <button onclick="document.getElementById('fhirModalBox').remove()" class="text-slate-400 hover:text-white font-bold text-lg cursor-pointer">✕</button>
-          </div>
-          <div class="p-6 overflow-y-auto font-mono text-xs text-slate-800 bg-slate-50 flex-1">
-            <pre class="whitespace-pre-wrap">${JSON.stringify(fhirData, null, 2)}</pre>
-          </div>
-          <div class="px-6 py-3 bg-white border-t border-slate-200 flex justify-end">
-            <button onclick="document.getElementById('fhirModalBox').remove()" class="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl cursor-pointer">Close Preview</button>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(modal);
-    };
+    window.filterQueue = filterQueue;
 
-    // Auto-initialize on DOM load
+    // ==============================================================
+    // 6. INITIALIZATION & GLOBAL DELEGATION
+    // ==============================================================
     document.addEventListener('DOMContentLoaded', () => {
+      // Ensure initial screen is active
       window.navigateTo(1);
       window.recalculateClinicalState();
+      window.handleLiveSoapInput();
     });
   </script>
 </body>
