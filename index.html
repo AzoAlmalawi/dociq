@@ -1768,6 +1768,10 @@ Plan discharge when clinically ready.</div>
     // ==============================================================
     // 4. LIVE TWO-WAY CLINICAL EVALUATION & DELETION DEDUCTION ENGINE
     // ==============================================================
+    
+    // ==============================================================
+    // 4. LIVE TWO-WAY CLINICAL EVALUATION & DELETION DEDUCTION ENGINE
+    // ==============================================================
     window.evaluateClinicalNote = function() {
       try {
         const sSubj = (getEl('soapSubjectiveText', 'subjectiveTextarea')?.value || '').trim();
@@ -1894,9 +1898,6 @@ Plan discharge when clinically ready.</div>
         const r = evalRes.research;
 
         // Dynamic Color Rules:
-        // Red < 80%
-        // Orange / Amber 80% - 89%
-        // Green >= 90%
         let qColorHex = '#EF4444'; // Red
         let qBgClass = 'bg-red-500';
         let qTextClass = 'text-red-600';
@@ -1926,7 +1927,7 @@ Plan discharge when clinically ready.</div>
           gaugeSubLabelClass = 'text-[9px] font-bold text-amber-700';
         }
 
-        // 1. UPDATE STEP 3 INTELLIGENCE GAUGE (Exact Target IDs)
+        // 1. UPDATE STEP 3 INTELLIGENCE GAUGE
         const gNum = document.getElementById('aiGaugeNumber');
         if (gNum) {
           gNum.innerText = `${q}%`;
@@ -1950,7 +1951,7 @@ Plan discharge when clinically ready.</div>
           gBadge.className = `px-2 py-0.5 rounded text-xs font-bold ${qBadgeClass} transition-all`;
         }
 
-        // Sub-scores Breakdown (Exact Target IDs)
+        // Sub-scores Breakdown
         const wComp = document.getElementById('weightCompleteness');
         if (wComp) wComp.innerText = `${evalRes.compPts} pts (${evalRes.matchedCount}/11 items)`;
 
@@ -1963,52 +1964,126 @@ Plan discharge when clinically ready.</div>
         const wOrg = document.getElementById('weightOrg');
         if (wOrg) wOrg.innerText = `${evalRes.soapPts} pts`;
 
-        // 2. Step 3 Remediation Banners & Badges (Two-Way Reactivity)
-        const labBanner = document.getElementById('objectiveGapBanner');
-        if (labBanner) labBanner.style.display = evalRes.hasLabs ? 'none' : 'flex';
-
+        // 2. STEP 3 REMEDIATION BANNERS & BUTTONS (HIDES ON INSERTION)
+        // Objective (Labs)
+        const objBefore = document.getElementById('objBeforeBadge') || document.getElementById('objectiveGapBanner');
+        const objAfter = document.getElementById('objAfterBadge');
+        const objKinetics = document.getElementById('objKineticsText');
         const objBadge = document.getElementById('objectiveStatusBadge');
+        const objCount = document.getElementById('objCounter') || document.getElementById('objCharFoot');
+
+        if (objBefore) objBefore.style.display = evalRes.hasLabs ? 'none' : 'flex';
+        if (objAfter) objAfter.style.display = evalRes.hasLabs ? 'flex' : 'none';
+        if (objKinetics) {
+          if (evalRes.hasLabs) {
+            objKinetics.innerText = '&check; Cerner LIS Biomarkers Included';
+            objKinetics.className = 'text-emerald-700 font-semibold';
+          } else {
+            objKinetics.innerText = 'Click [+ Insert] to raise score to 76%';
+            objKinetics.className = 'text-amber-700 font-semibold';
+          }
+        }
         if (objBadge) {
-          objBadge.innerText = evalRes.hasLabs ? 'LIS Biomarkers Synced' : (evalRes.lenObj === 0 ? 'Objective Empty' : 'Pending Labs (WBC / CRP)');
-          objBadge.className = evalRes.hasLabs ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200' : 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
+          objBadge.innerText = evalRes.hasLabs ? 'Biomarkers Included' : (evalRes.lenObj === 0 ? 'Objective Empty' : 'Pending Labs (WBC / CRP)');
+          objBadge.className = evalRes.hasLabs ? 'text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded' : 'text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded';
         }
+        if (objCount) objCount.innerText = `Character count: ${evalRes.lenObj} | Matched CAP Elements: ${evalRes.matchedCount}/11`;
 
-        const acoBanner = document.getElementById('assessmentGapBanner');
-        if (acoBanner) acoBanner.style.display = evalRes.hasAco ? 'none' : 'flex';
-
+        // Assessment (ACO)
+        const assessBefore = document.getElementById('assessBeforeBadge') || document.getElementById('assessmentGapBanner');
+        const assessAfter = document.getElementById('assessAfterBadge');
+        const assessIcd = document.getElementById('assessIcdText');
         const assessBadge = document.getElementById('assessmentStatusBadge');
+        const assessCount = document.getElementById('assessCounter') || document.getElementById('assessCharFoot');
+
+        if (assessBefore) assessBefore.style.display = evalRes.hasAco ? 'none' : 'flex';
+        if (assessAfter) assessAfter.style.display = evalRes.hasAco ? 'flex' : 'none';
+        if (assessIcd) {
+          if (evalRes.hasAco) {
+            assessIcd.innerText = '&check; ACO Specificity Recorded (J44.9)';
+            assessIcd.className = 'text-emerald-700 font-semibold';
+          } else {
+            assessIcd.innerText = 'Click [+ Clarify] to raise score to 84%';
+            assessIcd.className = 'text-teal-700 font-semibold';
+          }
+        }
         if (assessBadge) {
-          assessBadge.innerText = evalRes.hasAco ? 'ACO Specific (J44.9)' : (evalRes.lenAssess === 0 ? 'Assessment Empty' : 'Needs Specificity');
-          assessBadge.className = evalRes.hasAco ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200' : 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
+          assessBadge.innerText = evalRes.hasAco ? 'ACO Specific (J44.9)' : (evalRes.lenAssess === 0 ? 'Assessment Empty' : 'ACO Specificity Needed');
+          assessBadge.className = evalRes.hasAco ? 'text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded' : 'text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded';
         }
+        if (assessCount) assessCount.innerText = `Character count: ${evalRes.lenAssess} | Matched CAP Elements: ${evalRes.matchedCount}/11`;
 
-        const planBanner = document.getElementById('planGapBanner');
-        if (planBanner) planBanner.style.display = evalRes.hasPlan ? 'none' : 'flex';
-
+        // Plan (Stewardship)
+        const planBefore = document.getElementById('planBeforeBadge') || document.getElementById('planGapBanner');
+        const planAfter = document.getElementById('planAfterBadge');
+        const planDuration = document.getElementById('planDurationText');
         const planBadge = document.getElementById('planStatusBadge');
-        if (planBadge) {
-          planBadge.innerText = evalRes.hasPlan ? '7-Day Stewardship' : (evalRes.lenPlan === 0 ? 'Plan Empty' : 'Unspecified Duration');
-          planBadge.className = evalRes.hasPlan ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200' : 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
-        }
+        const planCount = document.getElementById('planCounter') || document.getElementById('planCharFoot');
 
+        if (planBefore) planBefore.style.display = evalRes.hasPlan ? 'none' : 'flex';
+        if (planAfter) planAfter.style.display = evalRes.hasPlan ? 'flex' : 'none';
+        if (planDuration) {
+          if (evalRes.hasPlan) {
+            planDuration.innerText = '&check; 7-Day Antimicrobial Stewardship Active';
+            planDuration.className = 'text-emerald-700 font-semibold';
+          } else {
+            planDuration.innerText = 'Click [+ Apply] to reach 92% (Compliant)';
+            planDuration.className = 'text-amber-700 font-semibold';
+          }
+        }
+        if (planBadge) {
+          planBadge.innerText = evalRes.hasPlan ? '7-Day Stewardship' : (evalRes.lenPlan === 0 ? 'Plan Empty' : 'Duration Vague');
+          planBadge.className = evalRes.hasPlan ? 'text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded' : 'text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded';
+        }
+        if (planCount) planCount.innerText = `Character count: ${evalRes.lenPlan} | Matched CAP Elements: ${evalRes.matchedCount}/11`;
+
+        // Subjective
         const subjBadge = document.getElementById('subjectiveStatusBadge');
+        const subjCount = document.getElementById('subjCounter') || document.getElementById('subjCharFoot');
         if (subjBadge) {
           subjBadge.innerText = evalRes.lenSubj >= 25 ? 'HPI Recorded' : (evalRes.lenSubj === 0 ? 'Subjective Empty' : 'HPI Incomplete');
           subjBadge.className = evalRes.lenSubj >= 25 ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200' : 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
         }
+        if (subjCount) subjCount.innerText = `Character count: ${evalRes.lenSubj} | Matched CAP Elements: ${evalRes.matchedCount}/11`;
 
-        // Section Character Footers
-        const sSubjFoot = document.getElementById('subjCharFoot');
-        if (sSubjFoot) sSubjFoot.innerText = `Character count: ${evalRes.lenSubj} | Matched CAP Elements: ${evalRes.matchedCount}/11`;
+        // Right Gaps List Container
+        const alertsBox = document.getElementById('alertsContainer');
+        if (alertsBox) {
+          const allResolved = evalRes.hasLabs && evalRes.hasAco && evalRes.hasPlan;
+          if (allResolved) {
+            alertsBox.className = 'card-hospital p-5 space-y-3 bg-emerald-50/70 border-emerald-300 transition-all';
+            alertsBox.innerHTML = `
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-900">Documentation Gaps & Action Items</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">All Gaps Resolved &check;</span>
+              </div>
+              <div class="space-y-1.5 text-xs text-emerald-950">
+                <p>&check; <strong>Objective:</strong> Cerner LIS biomarkers ingested and validated.</p>
+                <p>&check; <strong>Assessment:</strong> ACO comorbidity specified (ICD-10 J44.9).</p>
+                <p>&check; <strong>Plan:</strong> ATS/IDSA 7-day oral step-down regimen active.</p>
+              </div>
+            `;
+          } else {
+            alertsBox.className = 'card-hospital p-5 space-y-3 bg-amber-50/60 border-amber-300 transition-all';
+            let pendingCount = 0;
+            if (!evalRes.hasLabs) pendingCount++;
+            if (!evalRes.hasAco) pendingCount++;
+            if (!evalRes.hasPlan) pendingCount++;
 
-        const sObjFoot = document.getElementById('objCharFoot');
-        if (sObjFoot) sObjFoot.innerText = `Character count: ${evalRes.lenObj} | Matched CAP Elements: ${evalRes.matchedCount}/11`;
-
-        const sAssessFoot = document.getElementById('assessCharFoot');
-        if (sAssessFoot) sAssessFoot.innerText = `Character count: ${evalRes.lenAssess} | Matched CAP Elements: ${evalRes.matchedCount}/11`;
-
-        const sPlanFoot = document.getElementById('planCharFoot');
-        if (sPlanFoot) sPlanFoot.innerText = `Character count: ${evalRes.lenPlan} | Matched CAP Elements: ${evalRes.matchedCount}/11`;
+            let gapsHtml = `
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-amber-900">Documentation Gaps & Action Items</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">${pendingCount} Actions Pending</span>
+              </div>
+              <div class="space-y-1.5 text-xs text-amber-950">
+            `;
+            if (!evalRes.hasLabs) gapsHtml += `<p>&bull; <strong>Objective:</strong> Inflammatory kinetics (WBC & CRP) missing from progress note.</p>`;
+            if (!evalRes.hasAco) gapsHtml += `<p>&bull; <strong>Assessment:</strong> Asthma-COPD Overlap specificity unstated (needed for RWE registry).</p>`;
+            if (!evalRes.hasPlan) gapsHtml += `<p>&bull; <strong>Plan:</strong> Oral step-down dosing target (7 days) unquantified.</p>`;
+            gapsHtml += `</div>`;
+            alertsBox.innerHTML = gapsHtml;
+          }
+        }
 
         // 3. Step 1 Queue Sarah Al-Otaibi Card
         const qScore1 = document.getElementById('queueDocScore-1');
@@ -2027,13 +2102,8 @@ Plan discharge when clinically ready.</div>
           qBadge1.className = `px-2 py-0.5 rounded text-[10px] font-bold ${qBadgeClass}`;
         }
 
-        // 4. Step 4 Checklist UI
         window.updateStep4UI();
-
-        // 5. Step 6 Dual Scoring UI
         window.updateStep6UI();
-
-        // 6. Step 7 Final Note UI
         window.updateStep7UI();
 
       } catch (e) {}
