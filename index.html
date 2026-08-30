@@ -125,7 +125,7 @@
           <div>
             <div class="text-xs font-bold text-slate-900 flex items-center gap-1">
               <span>Sarah Al-Otaibi</span>
-              <span class="text-[9px] px-1 py-0.2 rounded bg-teal-200 text-teal-900 font-bold">Active Encounter</span>
+              <span id="topHeaderPatientBadge" class="text-[9px] px-1 py-0.2 rounded bg-teal-200 text-teal-900 font-bold transition-all">Active Inpatient</span>
             </div>
             <div class="text-[10px] text-slate-500">71y F  MRN 882934  Room 402-B</div>
           </div>
@@ -1632,6 +1632,125 @@ Plan discharge when clinically ready.</div>
     ];
 
     window.auditLogs = [...INITIAL_AUDIT_LOGS];
+
+    
+    // ==============================================================
+    // STEP 5 INTERACTIVE CDS & HEADER ATTESTATION LOCK ENGINE
+    // ==============================================================
+    window.handleStep5AcceptPlan = function() {
+      const planText = getEl('soapPlanText', 'planTextarea');
+      if (planText) {
+        const planSnippet = `- Step-down to Oral Amoxicillin-Clavulanate 875/125mg PO BID (Complete 4 days outpatient for 7-day total course).\n- Outpatient spirometry within 7 days post-discharge.`;
+        planText.value = planSnippet;
+      }
+
+      window.clinicalState.appliedPlan = true;
+      highlightTextarea('planTextarea');
+      window.recalculateClinicalState();
+
+      const btn = document.getElementById('btnStep5AcceptPlan');
+      if (btn) {
+        btn.innerText = '✓ Inserted into Plan';
+        btn.className = 'flex-1 py-2.5 px-3 bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-soft transition-all opacity-90 cursor-default';
+        btn.disabled = true;
+      }
+
+      window.addAuditLogEntry(
+        "Step 5 CDS Antimicrobial Regimen Inserted",
+        "CDS_STEWARDSHIP_ACCEPTED",
+        "Transferred oral step-down regimen directly into Plan from CDS Stewardship Hub.",
+        "Quality Score: +8% (Elevated to " + window.clinicalState.score + "%)",
+        "bg-teal-50 text-teal-800 border-teal-300"
+      );
+
+      showToast("✓ Stewardship regimen inserted into Clinical Plan", "success");
+    };
+
+    window.handleStep5OrderPulmonary = function() {
+      const btn = document.getElementById('btnStep5Pulmonary');
+      if (btn) {
+        btn.innerText = '✓ Order Placed';
+        btn.className = 'flex-1 py-2.5 px-3 bg-indigo-600 text-white font-bold text-xs rounded-xl shadow-soft transition-all opacity-90 cursor-default';
+        btn.disabled = true;
+      }
+
+      window.addAuditLogEntry(
+        "Outpatient Pulmonary Consult & Spirometry Ordered",
+        "ORDER_PULMONARY_CONSULT",
+        "Placed outpatient spirometry & inhaler technique review order within 5-7 days post-discharge.",
+        "Order Status: Committed to Cerner EHR",
+        "bg-indigo-50 text-indigo-800 border-indigo-300"
+      );
+
+      showToast("✓ Outpatient Pulmonary Consult & Spirometry ordered", "success");
+    };
+
+    window.handleStep5TagRwe = function() {
+      const btn = document.getElementById('btnStep5Rwe');
+      if (btn) {
+        btn.innerText = '✓ Tagged for RWE Export';
+        btn.className = 'w-full py-2.5 px-3 bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-soft transition-all opacity-90 cursor-default';
+        btn.disabled = true;
+      }
+
+      window.addAuditLogEntry(
+        "De-Identified USCDI RWE Cohort Tagged",
+        "RWE_REGISTRY_TAGGED",
+        "Tagged encounter for National Multi-Center Pneumonia Real-World Evidence (RWE) Cohort.",
+        "Registry Status: USCDI v6.0 Verified",
+        "bg-blue-50 text-blue-800 border-blue-300"
+      );
+
+      showToast("✓ Tagged for De-Identified RWE Cohort Export", "success");
+    };
+
+    // Override saveFinalRecord with legal EHR note locking
+    window.saveFinalRecord = function() {
+      window.clinicalState.isFinalized = true;
+
+      // 1. Lock Step 3 textareas
+      const textareas = ['subjectiveTextarea', 'objectiveTextarea', 'assessmentTextarea', 'planTextarea'];
+      textareas.forEach(id => {
+        const ta = document.getElementById(id);
+        if (ta) {
+          ta.readOnly = true;
+          ta.disabled = true;
+          ta.classList.add('opacity-75', 'bg-slate-100', 'cursor-not-allowed');
+        }
+      });
+
+      // 2. Update Top Navbar Patient Badge
+      const topBadge = document.getElementById('topHeaderPatientBadge');
+      if (topBadge) {
+        topBadge.innerText = '✓ Attested & Locked (FHIR R4)';
+        topBadge.className = 'text-[9px] px-2 py-0.5 rounded bg-emerald-600 text-white font-bold shadow-xs animate-pulse';
+      }
+
+      // 3. Update Step 7 Badges
+      const fHeaderBadge = document.getElementById('finalHeaderBadge');
+      if (fHeaderBadge) {
+        fHeaderBadge.innerText = '✓ Signed & Committed in EHR (FHIR R4)';
+        fHeaderBadge.className = 'px-2.5 py-0.5 rounded text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200';
+      }
+
+      const attestPill = document.getElementById('attestStatusPill');
+      if (attestPill) {
+        attestPill.innerText = '✓ Attested (RSA-2048 Sealed)';
+        attestPill.className = 'px-2 py-0.2 rounded bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-bold';
+      }
+
+      // 4. Audit Log Entry
+      window.addAuditLogEntry(
+        "Cryptographic 2048-bit RSA Attestation Signed & FHIR R4 Bundle Sealed",
+        "EHR_ATTESTATION",
+        "Encounter Day 3 Progress Note cryptographically sealed with RSA-2048 digital certificate and broadcast to Cerner HIE repository.",
+        "Status: FINAL / SEALED (Quality: " + window.clinicalState.score + "%)",
+        "bg-emerald-100 text-emerald-900 border-emerald-400"
+      );
+
+      showToast("✓ FHIR R4 Bundle signed and synced to EHR Registry", "success");
+      window.renderAuditTrailUI();
+    };
 
     window.addAuditLogEntry = function(action, category, details, impact, badgeColor = 'bg-teal-50 text-teal-800 border-teal-300') {
       const now = new Date();
