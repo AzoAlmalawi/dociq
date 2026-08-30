@@ -150,41 +150,7 @@
     </div>
   </header>
 
-  <!-- UNIVERSAL TOP STEPPER NAVIGATION BAR (All Screen Sizes) -->
-  <div class="bg-white border-b border-slate-200 sticky top-16 z-30 shadow-xs px-3 sm:px-6 py-2 overflow-x-auto select-none">
-    <div class="max-w-7xl mx-auto flex items-center justify-between gap-1.5 sm:gap-2 min-w-[720px] sm:min-w-0">
-      <button onclick="navigateTo(1)" id="topStepBtn-1" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 shadow-2xs">
-        <span class="w-5 h-5 rounded-full bg-teal-700 text-white flex items-center justify-center text-[10px] shrink-0">1</span>
-        <span class="truncate">Encounters</span>
-      </button>
-      <button onclick="navigateTo(2)" id="topStepBtn-2" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent">
-        <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0">2</span>
-        <span class="truncate">Patient Record</span>
-      </button>
-      <button onclick="navigateTo(3)" id="topStepBtn-3" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent">
-        <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0">3</span>
-        <span class="truncate">Clinical Document</span>
-      </button>
-      <button onclick="navigateTo(4)" id="topStepBtn-4" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent">
-        <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0">4</span>
-        <span class="truncate">Clinical Review</span>
-      </button>
-      <button onclick="navigateTo(5)" id="topStepBtn-5" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent">
-        <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0">5</span>
-        <span class="truncate">AI Recommendations</span>
-      </button>
-      <button onclick="navigateTo(6)" id="topStepBtn-6" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent">
-        <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0">6</span>
-        <span class="truncate">Dual Scores</span>
-      </button>
-      <button onclick="navigateTo(7)" id="topStepBtn-7" class="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent">
-        <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0">7</span>
-        <span class="truncate">Finalize Record</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- MAIN WORKSPACE -->
+<!-- MAIN WORKSPACE -->
   <div class="flex-1 flex overflow-hidden">
     
     <!-- PERSISTENT LEFT 7-STEP SIDEBAR -->
@@ -1594,22 +1560,7 @@ Plan discharge when clinically ready.</div>
               : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
           }
 
-          // Top Stepper Button Highlight
-          const topBtn = document.getElementById('topStepBtn-' + s);
-          if (topBtn) {
-            const isActive = (s === target);
-            topBtn.className = isActive
-              ? 'flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 shadow-2xs'
-              : 'flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-slate-600 hover:bg-slate-100 border border-transparent';
-            
-            const numSpan = topBtn.querySelector('span:first-child');
-            if (numSpan) {
-              numSpan.className = isActive
-                ? 'w-5 h-5 rounded-full bg-teal-700 text-white flex items-center justify-center text-[10px] shrink-0'
-                : 'w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] shrink-0';
-            }
           }
-        }
 
         try { if (typeof window.recalculateClinicalState === 'function') window.recalculateClinicalState(); } catch(e) {}
         try { if (target === 4 && typeof window.renderStep4Checklist === 'function') window.renderStep4Checklist(); } catch(e) {}
