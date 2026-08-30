@@ -287,7 +287,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="patientsGrid">
           
           <!-- Card 1: Sarah Al-Otaibi (Primary Anchor) -->
-          <div class="card-hospital p-5 space-y-4 border-2 border-teal-700 bg-white rounded-2xl shadow-sm relative transition-all hover:shadow-md">
+          <div onclick="navigateTo(3)" class="card-hospital p-5 space-y-4 border-2 border-teal-700 bg-white rounded-2xl shadow-sm relative transition-all hover:shadow-md cursor-pointer group">
             <div class="flex items-start justify-between gap-2">
               <div>
                 <div class="flex items-center gap-2">
@@ -471,7 +471,7 @@
       <!-- STEP 2: PATIENT RECORD -->
       <div id="screen-2" class="space-y-6 max-w-6xl mx-auto fade-in hidden">
         <div class="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto pb-1">
-          <button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
+          <button onclick="navigateTo(2)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg mr-1 flex items-center gap-1 cursor-pointer">&larr; Back (Step 2)</button><button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
           <span></span>
           <span class="font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">Step 2: Patient Record</span>
           <span></span>
@@ -555,7 +555,7 @@
       <!-- STEP 3: CLINICAL DOCUMENT (SOAP WORKSTATION) -->
       <div id="screen-3" class="space-y-6 max-w-7xl mx-auto fade-in hidden">
         <div class="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto pb-1">
-          <button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
+          <button onclick="navigateTo(2)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg mr-1 flex items-center gap-1 cursor-pointer">&larr; Back (Step 2)</button><button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
           <span></span>
           <button onclick="navigateTo(2)" class="hover:text-teal-700">Step 2: Patient Record</button>
           <span></span>
@@ -567,6 +567,12 @@
         </div>
 
         <div class="card-hospital p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 border-l-teal-700">
+          <div>
+            <div class="flex items-center gap-2 mb-2">
+              <button onclick="navigateTo(1)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition flex items-center gap-1 cursor-pointer">
+                <span>&larr; Back to Queue</span>
+              </button>
+            </div>
           <div>
             <div class="flex items-center gap-2.5">
               <h2 class="text-xl font-bold text-slate-900">Clinical Progress Note & Step-Down Order</h2>
@@ -838,7 +844,10 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
             <p class="text-xs text-slate-500 mt-1">11-Point CAP documentation checklist dynamically evaluated by evaluateClinicalNote.</p>
           </div>
 
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2">
+            <button onclick="navigateTo(3)" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition flex items-center gap-1 cursor-pointer">
+              <span>&larr; Back (Step 3)</span>
+            </button>
             <div class="text-right">
               <div class="text-xs font-bold text-slate-800" id="ckSummaryText">8 / 11 Completed (73%)</div>
               <div class="w-32 h-2 rounded-full bg-slate-100 overflow-hidden mt-1">
@@ -951,7 +960,7 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
         
         <!-- Breadcrumb Stepper -->
         <div class="flex items-center gap-2 text-xs text-slate-500 overflow-x-auto pb-1 select-none">
-          <button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
+          <button onclick="navigateTo(2)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg mr-1 flex items-center gap-1 cursor-pointer">&larr; Back (Step 2)</button><button onclick="navigateTo(1)" class="hover:text-teal-700">Step 1: Encounters</button>
           <span>&gt;</span>
           <button onclick="navigateTo(3)" class="hover:text-teal-700">Step 3: Clinical Document</button>
           <span>&gt;</span>
@@ -1156,7 +1165,13 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       <div id="screen-6" class="w-full max-w-6xl mx-auto space-y-6 fade-in pb-12 hidden">
       
       <!-- Top Header Card -->
-      <div class="flex items-center justify-between bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div>
+          <div class="flex items-center gap-2 mb-1.5">
+            <button onclick="navigateTo(5)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition flex items-center gap-1 cursor-pointer">
+              <span>&larr; Back (Step 5)</span>
+            </button>
+          </div>
         <div>
           <h2 class="text-xl font-bold text-slate-900">Dual Scoring Engine</h2>
           <p class="text-xs text-slate-500 mt-1">Multi-dimensional EHR Data Quality & Research Readiness Evaluation</p>
@@ -1302,7 +1317,12 @@ Physical Exam: Light end-inspiratory crackles right lower lobe, improving compar
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <div class="flex items-center gap-2.5">
-            <h2 class="text-xl font-bold text-slate-900">Step 7: Finalize Clinical Record</h2>
+            <h2 class="text-xl font-bold text-slate-900"><div class="flex items-center gap-2 mb-1">
+              <button onclick="navigateTo(6)" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition flex items-center gap-1 cursor-pointer">
+                <span>&larr; Back (Step 6)</span>
+              </button>
+            </div>
+            Step 7: Finalize Clinical Record</h2>
             <span id="finalHeaderBadge" class="px-2.5 py-0.5 rounded text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">Draft (Unsigned)</span>
           </div>
           <p class="text-xs text-slate-500 mt-1">Cryptographic SHA-256 provenance stamping and immediate FHIR R4 document bridge synchronization.</p>
@@ -1480,7 +1500,7 @@ Plan discharge when clinically ready.</div>
   </div>
 
   <!-- TOAST CONTAINER -->
-  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm no-print"></div>
+  <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none max-w-sm"></div>
 
   <!-- JAVASCRIPT LOGIC -->
   <script>
@@ -2462,65 +2482,151 @@ Plan discharge when clinically ready.</div>
     // ==============================================================
     // 6. TOAST, MODAL & SIGNING UTILITIES
     // ==============================================================
+    
+    // ==============================================================
+    // VISUAL DIFF GLOW & TOAST NOTIFICATION ENGINE
+    // ==============================================================
+    function highlightTextarea(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('ring-4', 'ring-emerald-400', 'bg-emerald-50/40', 'border-emerald-500');
+      setTimeout(() => {
+        el.classList.remove('ring-4', 'ring-emerald-400', 'bg-emerald-50/40', 'border-emerald-500');
+      }, 2500);
+    }
+
     function showToast(msg, type = 'info') {
-      const container = getEl('toastContainer', 'appToastBox');
+      const container = document.getElementById('toastContainer');
       if (!container) return;
 
       const toast = document.createElement('div');
-      toast.className = 'px-4 py-3 bg-slate-900 text-white rounded-xl shadow-xl flex items-center gap-3 border border-slate-700 text-xs font-semibold animate-bounce';
-      toast.innerHTML = `<span class="w-2 h-2 rounded-full ${type === 'success' ? 'bg-emerald-400' : 'bg-teal-400'}"></span><span>${msg}</span>`;
+      toast.className = 'px-4 py-3 bg-slate-900/95 text-white rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700/80 text-xs font-semibold transition-all transform translate-y-0 opacity-100 pointer-events-auto backdrop-blur-md';
+      toast.innerHTML = `
+        <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xs shrink-0 font-bold">
+          &check;
+        </div>
+        <span class="leading-snug">${msg}</span>
+      `;
       container.appendChild(toast);
 
       setTimeout(() => {
-        toast.remove();
-      }, 3200);
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 400);
+      }, 3500);
     }
 
     window.showToast = showToast;
+    window.highlightTextarea = highlightTextarea;
 
-    function openModal(id) {
-      const m = document.getElementById(id);
-      if (m) {
-        m.classList.remove('hidden');
-        m.style.display = 'flex';
-        if (id === 'auditModal') {
-          window.renderAuditTrailUI();
+    window.handleInsertLabs = function() {
+      const objText = getEl('soapObjectiveText', 'objectiveTextarea');
+      if (objText) {
+        const labsSnippet = `\n\nCerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Procalcitonin 0.11 ng/mL.`;
+        if (!objText.value.includes('Cerner LIS Batch')) {
+          objText.value = objText.value.trim() + labsSnippet;
         }
       }
-    }
 
-    function closeModal(id) {
-      const m = document.getElementById(id);
-      if (m) {
-        m.classList.add('hidden');
-        m.style.display = 'none';
+      window.clinicalState.appliedLabs = true;
+      highlightTextarea('objectiveTextarea');
+      window.recalculateClinicalState();
+
+      window.addAuditLogEntry(
+        "Cerner LIS LOINC Biomarkers Ingested",
+        "LAB_INGESTION",
+        "Appended validated laboratory telemetry (WBC 8.2, CRP 6.5) to Objective section.",
+        "Quality Score: +8% (Elevated to " + window.clinicalState.score + "%)",
+        "bg-teal-50 text-teal-800 border-teal-300"
+      );
+
+      showToast("&check; Cerner LIS Biomarkers appended & LOINC mapped", "success");
+    };
+
+    window.acceptLabIngestion = window.handleInsertLabs;
+    window.insertCernerLabs = window.handleInsertLabs;
+
+    window.handleClarifyAco = function() {
+      const assessText = getEl('soapAssessmentText', 'assessmentTextarea');
+      if (assessText) {
+        const acoReplacement = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO - ICD-10 J44.9/J45.30) - Specified & Stable.\n3. Essential Hypertension - Blood pressure controlled.`;
+        assessText.value = acoReplacement;
       }
-    }
 
-    window.openModal = openModal;
-    window.closeModal = closeModal;
+      window.clinicalState.appliedAco = true;
+      highlightTextarea('assessmentTextarea');
+      window.recalculateClinicalState();
 
-    function openFhirModal() {
-      openModal('fhirModal');
-    }
+      window.addAuditLogEntry(
+        "Diagnostic Specificity Refined: ACO (ICD-10 J44.9 / J45.30)",
+        "DIAGNOSTIC_SPECIFICITY",
+        "Refined generic mild asthma diagnosis to Asthma-COPD Overlap syndrome with discrete SNOMED/ICD-10 mapping.",
+        "Quality Score: +8% (Elevated to " + window.clinicalState.score + "%)",
+        "bg-teal-50 text-teal-800 border-teal-300"
+      );
 
-    function closeFhirModal() {
-      closeModal('fhirModal');
-    }
+      showToast("&check; Comorbidity refined to ICD-10 J44.9 / J45.30", "success");
+    };
 
-    window.openFhirModal = openFhirModal;
-    window.closeFhirModal = closeFhirModal;
+    window.acceptAcoSpecificity = window.handleClarifyAco;
+    window.clarifyComorbidity = window.handleClarifyAco;
 
-    function copyFhirJson() {
-      const fhirText = getEl('fhirPreBlock')?.innerText || '{}';
-      navigator.clipboard.writeText(fhirText).then(() => {
-        showToast('FHIR R4 JSON copied to clipboard', 'success');
-      });
-    }
+    window.handleApplyPlan = function() {
+      const planText = getEl('soapPlanText', 'planTextarea');
+      if (planText) {
+        const planSnippet = `- Step-down to Oral Amoxicillin-Clavulanate 875/125mg PO BID (Complete 4 days outpatient for 7-day total course).\n- Outpatient spirometry within 7 days post-discharge.`;
+        planText.value = planSnippet;
+      }
 
-    window.copyFhirJson = copyFhirJson;
+      window.clinicalState.appliedPlan = true;
+      highlightTextarea('planTextarea');
+      window.recalculateClinicalState();
 
-    function saveFinalRecord() {
+      window.addAuditLogEntry(
+        "ATS/IDSA 7-Day Antimicrobial Stewardship Target Applied",
+        "STEWARDSHIP_PLAN",
+        "Switched patient from IV Ceftriaxone to oral Amox/Clav 875/125mg BID with strict 7-day total target.",
+        "Quality Score: +8% (Elevated to " + window.clinicalState.score + "%)",
+        "bg-teal-50 text-teal-800 border-teal-300"
+      );
+
+      showToast("&check; ATS/IDSA 7-Day Stewardship Regimen applied", "success");
+    };
+
+    window.acceptStewardshipPlan = window.handleApplyPlan;
+    window.applyStewardshipPlan = window.handleApplyPlan;
+
+    window.quickFillOptimalNote = function() {
+      const objText = getEl('soapObjectiveText', 'objectiveTextarea');
+      const assessText = getEl('soapAssessmentText', 'assessmentTextarea');
+      const planText = getEl('soapPlanText', 'planTextarea');
+
+      if (objText) objText.value = `Vitals (Day 3): Temp: 37.1 °C (afebrile x 24h), BP: 118/74 mmHg, HR: 78 bpm, RR: 16, SpO2: 98% on room air.\nPhysical Exam: Light end-inspiratory crackles right lower lobe, improving compared to Day 1. No wheezing.\n\nCerner LIS Batch (LOINC Validated): WBC 8.2x10^9/L, CRP 6.5 mg/L (85% drop), Procalcitonin 0.11 ng/mL.`;
+      if (assessText) assessText.value = `1. Community-Acquired Pneumonia (CAP) - Resolving (ICD-10 J18.9).\n2. Asthma-COPD Overlap (ACO - ICD-10 J44.9/J45.30) - Specified & Stable.\n3. Essential Hypertension - Blood pressure controlled.`;
+      if (planText) planText.value = `- Step-down to Oral Amoxicillin-Clavulanate 875/125mg PO BID (Complete 4 days outpatient for 7-day total course).\n- Outpatient spirometry within 7 days post-discharge.`;
+
+      window.clinicalState.appliedLabs = true;
+      window.clinicalState.appliedAco = true;
+      window.clinicalState.appliedPlan = true;
+
+      highlightTextarea('objectiveTextarea');
+      highlightTextarea('assessmentTextarea');
+      highlightTextarea('planTextarea');
+
+      window.recalculateClinicalState();
+
+      window.addAuditLogEntry(
+        "DocIQ CDS Fast-Track Clinical Protocol Applied",
+        "CDS_FAST_TRACK",
+        "Simultaneously applied LOINC Biomarkers, ACO Specificity (J44.9), and ATS/IDSA 7-day Augmentin stewardship plan.",
+        "Quality Score Elevated to 92% (Fully Compliant)",
+        "bg-emerald-50 text-emerald-800 border-emerald-300"
+      );
+
+      showToast("&check; All CAP Protocol remediations applied successfully (Score: 92%)", "success");
+    };
+
+    window.saveFinalRecord = function() {
       window.addAuditLogEntry(
         "Cryptographic 2048-bit RSA Attestation Signed & FHIR R4 Bundle Sealed",
         "EHR_ATTESTATION",
@@ -2528,11 +2634,10 @@ Plan discharge when clinically ready.</div>
         "Status: FINAL / SEALED (Quality: " + window.clinicalState.score + "%)",
         "bg-emerald-100 text-emerald-900 border-emerald-400"
       );
-      showToast('&check; Cryptographically Signed & Committed to Cerner EHR', 'success');
+      showToast("&check; FHIR R4 Bundle signed and synced to EHR Registry", "success");
       window.renderAuditTrailUI();
-    }
+    };
 
-    window.saveFinalRecord = saveFinalRecord;
 
     function filterQueue(dept) {
       const btns = ['All', 'Internal Medicine', 'Cardiology', 'Surgery'];
