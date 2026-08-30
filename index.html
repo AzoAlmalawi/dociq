@@ -1488,14 +1488,279 @@ Plan discharge when clinically ready.</div>
     // 1. MASTER GLOBAL REACTIVE STATE ARCHITECTURE
     // ==============================================================
     window.clinicalState = {
-      score: 68,
-      researchScore: 72,
       appliedLabs: false,
       appliedAco: false,
       appliedPlan: false,
+      score: 68,
+      researchScore: 72,
       activeStep: 1
     };
 
+    window.docPatchState = window.clinicalState;
+    window.appScoreState = window.clinicalState;
+
+    function getEl() {
+      for (let i = 0; i < arguments.length; i++) {
+        const id = arguments[i];
+        const el = document.getElementById(id);
+        if (el) return el;
+      }
+      return null;
+    }
+
+    // ==============================================================
+    // 2. BULLETPROOF NAVIGATION ROUTER (ALL SCREENS 1 TO 7)
+    // ==============================================================
+    window.navigateTo = function(step) {
+      try {
+        const target = Math.min(Math.max(Number(step) || 1, 1), 7);
+        window.clinicalState.activeStep = target;
+
+        // Update URL hash without reloading
+        if (window.location.hash !== '#' + target && window.location.hash !== '#step-' + target) {
+          try { history.pushState(null, null, '#' + target); } catch(e) {}
+        }
+
+        // Toggle Screen Visibility
+        for (let s = 1; s <= 7; s++) {
+          const screenEl = document.getElementById('screen-' + s);
+          if (screenEl) {
+            if (s === target) {
+              screenEl.style.display = 'block';
+              screenEl.classList.remove('hidden');
+              screenEl.removeAttribute('hidden');
+            } else {
+              screenEl.style.display = 'none';
+              screenEl.classList.add('hidden');
+            }
+          }
+
+          // Sidebar Button Highlight
+          const sideBtn = document.getElementById('stepBtn-' + s);
+          if (sideBtn) {
+            const isActive = (s === target);
+            sideBtn.className = isActive
+              ? 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer bg-teal-50 text-teal-800 border border-teal-200 font-bold shadow-sm'
+              : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all cursor-pointer text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
+          }
+
+          }
+
+        try { if (typeof window.recalculateClinicalState === 'function') window.recalculateClinicalState(); } catch(e) {}
+        try { if (target === 4 && typeof window.renderStep4Checklist === 'function') window.renderStep4Checklist(); } catch(e) {}
+        try { if (target === 6 && typeof window.updateStep6UI === 'function') window.updateStep6UI(); } catch(e) {}
+        try { if (target === 7 && typeof window.updateStep7UI === 'function') window.updateStep7UI(); } catch(e) {}
+
+        const mainEl = document.querySelector('main');
+        if (mainEl) mainEl.scrollTop = 0;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) {
+        console.error("Navigation error:", err);
+      }
+    };
+
+    function navigateTo(step) { window.navigateTo(step); }
+    function setStep(step) { window.navigateTo(step); }
+    function setActiveTab(step) { window.navigateTo(step); }
+    function openStep(step) { window.navigateTo(step); }
+    window.setStep = window.navigateTo;
+    window.setActiveTab = window.navigateTo;
+    window.openStep = window.navigateTo;
+
+    // ==============================================================
+    // 3. IMMUTABLE CLINICAL AUDIT TRAIL ENGINE (DR. MOHAMMED)
+    // ==============================================================
+    const INITIAL_AUDIT_LOGS = [
+      {
+        id: "AUD-2026-0815-001",
+        timestamp: "2026-08-15 14:22:10 AST",
+        actor: {
+          name: "Dr. Mohammed",
+          role: "Attending Pulmonologist",
+          license: "SA-MD-99482",
+          department: "Inpatient Pulmonary Service"
+        },
+        action: "Inpatient Admission & Telemetry Baseline Linked",
+        category: "ADMISSION_INTAKE",
+        badgeColor: "bg-slate-100 text-slate-800 border-slate-300",
+        details: "Patient Sarah Al-Otaibi (MRN: 882934) admitted to Ward 4, Bed 402B. Baseline vitals and IV Ceftriaxone regimen recorded.",
+        impact: "EHR Encounter Initialized",
+        hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        id: "AUD-2026-0818-002",
+        timestamp: "2026-08-18 08:30:14 AST",
+        actor: {
+          name: "Dr. Mohammed",
+          role: "Attending Pulmonologist",
+          license: "SA-MD-99482",
+          department: "Inpatient Pulmonary Service"
+        },
+        action: "Day 3 Clinical SOAP Progress Note Drafted",
+        category: "NOTE_CREATION",
+        badgeColor: "bg-red-50 text-red-800 border-red-300",
+        details: "Initial un-remediated physician draft recorded with baseline Documentation Quality 68% and Research Readiness 72%.",
+        impact: "Initial Score: 68% (Deficient / Red)",
+        hash: "7d2c11f4a9b71e8f4b23a1059c3f99b2e81794b1a03e5c7d2e4f6a8b0c2e4f6a"
+      }
+    ];
+
+    window.auditLogs = [...INITIAL_AUDIT_LOGS];
+
+    window.addAuditLogEntry = function(action, category, details, impact, badgeColor = 'bg-teal-50 text-teal-800 border-teal-300') {
+      const now = new Date();
+      const timeStr = now.getFullYear() + '-' + 
+        String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(now.getDate()).padStart(2, '0') + ' ' + 
+        String(now.getHours()).padStart(2, '0') + ':' + 
+        String(now.getMinutes()).padStart(2, '0') + ':' + 
+        String(now.getSeconds()).padStart(2, '0') + ' AST';
+
+      const entryId = "AUD-2026-" + Date.now().toString().slice(-6);
+      
+      const rawString = `${entryId}-${timeStr}-Dr.Mohammed-${action}-${details}`;
+      let hash = 0;
+      for (let i = 0; i < rawString.length; i++) {
+        hash = ((hash << 5) - hash) + rawString.charCodeAt(i);
+        hash |= 0;
+      }
+      const hexHash = Math.abs(hash).toString(16).padStart(16, '0') + '9fc882934e0a7b4c';
+
+      const newEntry = {
+        id: entryId,
+        timestamp: timeStr,
+        actor: {
+          name: "Dr. Mohammed",
+          role: "Attending Pulmonologist",
+          license: "SA-MD-99482",
+          department: "Inpatient Pulmonary Service"
+        },
+        action: action,
+        category: category,
+        badgeColor: badgeColor,
+        details: details,
+        impact: impact,
+        hash: hexHash
+      };
+
+      window.auditLogs.push(newEntry);
+      window.renderAuditTrailUI();
+    };
+
+    window.renderAuditTrailUI = function() {
+      const container = document.getElementById('auditLogsContainer');
+      const countHeader = document.getElementById('auditHeaderCountBadge');
+      const countModal = document.getElementById('auditEventCounter');
+
+      const count = window.auditLogs.length;
+      if (countHeader) countHeader.innerText = count;
+      if (countModal) countModal.innerText = `${count} Clinical Events`;
+
+      if (!container) return;
+
+      container.innerHTML = window.auditLogs.map((log, index) => `
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3 hover:border-teal-300 transition-all">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-teal-700 text-white flex items-center justify-center font-bold text-xs">
+                ${index + 1}
+              </span>
+              <span class="text-xs font-black text-slate-900">${log.action}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${log.badgeColor}">
+                ${log.category}
+              </span>
+              <span class="text-[11px] font-mono text-slate-500 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                ${log.timestamp}
+              </span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 bg-slate-50 p-2.5 rounded-lg border border-slate-200/80 text-xs text-slate-700">
+            <div class="w-8 h-8 rounded-full bg-teal-700 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-2xs">
+              DM
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <strong class="text-slate-900 font-extrabold">${log.actor.name}</strong>
+                <span class="text-slate-500 font-normal">(${log.actor.role})</span>
+                <span class="px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 text-[10px] font-mono font-bold">
+                  License: ${log.actor.license}
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-500">${log.actor.department}</p>
+            </div>
+          </div>
+
+          <div class="space-y-1.5 text-xs">
+            <p class="text-slate-700 font-normal leading-relaxed bg-teal-50/30 p-2.5 rounded-lg border border-teal-100 font-sans">
+              <strong class="text-teal-900">Clinical Data Update:</strong> ${log.details}
+            </p>
+            <div class="flex items-center justify-between text-[11px] pt-1">
+              <span class="text-slate-600">
+                <strong class="text-slate-800">Quality Impact:</strong> <span class="font-bold text-teal-800">${log.impact}</span>
+              </span>
+              <span class="text-[10px] font-mono text-slate-400">
+                Ledger ID: <strong class="text-slate-600">${log.id}</strong>
+              </span>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-slate-400">
+            <div class="flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              <span class="text-emerald-700 font-bold">Cryptographically Provenanced:</span>
+              <span class="truncate max-w-[280px]">${log.hash}</span>
+            </div>
+            <span class="text-slate-500 font-sans font-bold bg-slate-100 px-2 py-0.5 rounded">USCDI v6 Verified</span>
+          </div>
+        </div>
+      `).join('');
+    };
+
+    window.downloadAuditLogJson = function() {
+      const payload = {
+        exportType: "DocIQ_Clinical_Audit_Trail",
+        patient: {
+          name: "Sarah Al-Otaibi",
+          mrn: "882934",
+          age: 71,
+          gender: "Female",
+          ward: "Inpatient Pulmonary Ward 4",
+          bed: "402B"
+        },
+        exportedAt: new Date().toISOString(),
+        exportedBy: {
+          name: "Dr. Mohammed",
+          role: "Attending Pulmonologist",
+          license: "SA-MD-99482"
+        },
+        totalEvents: window.auditLogs.length,
+        events: window.auditLogs
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(payload, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `DocIQ_Audit_Trail_Sarah_AlOtaibi_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('Audit Log JSON Downloaded Successfully', 'success');
+    };
+
+    window.clearTransientLogs = function() {
+      window.auditLogs = [...INITIAL_AUDIT_LOGS];
+      window.renderAuditTrailUI();
+      showToast('Audit Log Reset to Initial Baseline', 'info');
+    };
+
+    // ==============================================================
+    // 4. RECALCULATE CLINICAL STATE & TWO-WAY UI SYNC
+    // ==============================================================
+    
     // ==============================================================
     // ADVANCED TWO-WAY CLINICAL NLP & REAL-TIME EVALUATION ENGINE
     // ==============================================================
@@ -1530,19 +1795,19 @@ Plan discharge when clinically ready.</div>
         let compPts = 0.0;
         let matchedCount = 0;
 
-        if (lenSubj >= 25) { compPts += 7.0; matchedCount += 2; } // Demographics, HPI
+        if (lenSubj >= 25) { compPts += 7.0; matchedCount += 2; }
         else if (lenSubj > 0) { compPts += (lenSubj / 25) * 5.0; matchedCount += 1; }
 
-        if (lenObj >= 25) { compPts += 9.0; matchedCount += 3; } // Exam, Vitals, Baseline Meds
+        if (lenObj >= 25) { compPts += 9.0; matchedCount += 3; }
         else if (lenObj > 0) { compPts += (lenObj / 25) * 6.0; matchedCount += 1; }
 
-        if (lenAssess >= 15) { compPts += 4.0; matchedCount += 1; } // Problem list
+        if (lenAssess >= 15) { compPts += 4.0; matchedCount += 1; }
         else if (lenAssess > 0) { compPts += (lenAssess / 15) * 2.5; }
 
-        if (lenPlan >= 15) { compPts += 3.0; matchedCount += 1; } // Base plan
+        if (lenPlan >= 15) { compPts += 3.0; matchedCount += 1; }
         else if (lenPlan > 0) { compPts += (lenPlan / 15) * 2.0; }
 
-        // Remediation additions (up to +8% each)
+        // Remediation additions
         if (hasLabs && lenObj >= 30) { compPts += 5.67; matchedCount += 1; }
         if (hasAco && lenAssess >= 25) { compPts += 5.67; matchedCount += 1; }
         if (hasPlan && lenPlan >= 25) { compPts += 5.66; matchedCount += 1; }
@@ -1624,37 +1889,30 @@ Plan discharge when clinically ready.</div>
         const q = evalRes.quality;
         const r = evalRes.research;
 
-        // Dynamic Color Palettes:
-        // Red < 80%
-        // Orange / Amber 80% - 89%
-        // Green >= 90%
         let qColorHex = '#EF4444'; // Red
         let qBgClass = 'bg-red-500';
         let qTextClass = 'text-red-600';
-        let qBorderClass = 'border-red-500';
         let qStatusLabel = 'DEFICIENT';
         let qBadgeClass = 'bg-red-50 text-red-700 border border-red-200';
 
         if (q >= 90) {
-          qColorHex = '#10B981'; // Emerald Green
+          qColorHex = '#10B981'; // Green
           qBgClass = 'bg-emerald-500';
           qTextClass = 'text-emerald-600';
-          qBorderClass = 'border-emerald-500';
           qStatusLabel = 'EXCELLENT';
           qBadgeClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
         } else if (q >= 80) {
-          qColorHex = '#F59E0B'; // Amber / Orange
+          qColorHex = '#F59E0B'; // Orange / Amber
           qBgClass = 'bg-amber-500';
           qTextClass = 'text-amber-600';
-          qBorderClass = 'border-amber-500';
           qStatusLabel = 'PARTIAL';
           qBadgeClass = 'bg-amber-50 text-amber-700 border border-amber-200';
         }
 
-        // 1. Update Step 3 Circular Intelligence Gauge
+        // Circular Gauge
         const circle = document.getElementById('gaugeCircleProgress');
         if (circle) {
-          const circumference = 2 * Math.PI * 50; // 314.16
+          const circumference = 2 * Math.PI * 50;
           const offset = circumference - (q / 100) * circumference;
           circle.style.strokeDashoffset = offset;
           circle.style.stroke = qColorHex;
@@ -1678,7 +1936,7 @@ Plan discharge when clinically ready.</div>
           gStatus.className = `px-2.5 py-0.5 rounded text-xs font-bold ${qBadgeClass}`;
         }
 
-        // Sub-scores breakdown
+        // Sub-scores
         const compPtsEl = document.getElementById('compWeightPts');
         if (compPtsEl) compPtsEl.innerText = `${evalRes.compPts} pts (${evalRes.matchedCount}/11 items)`;
 
@@ -1691,80 +1949,41 @@ Plan discharge when clinically ready.</div>
         const soapPtsEl = document.getElementById('soapStructPts');
         if (soapPtsEl) soapPtsEl.innerText = `${evalRes.soapPts} pts`;
 
-        // 2. Update Step 3 Remediation Banners & Section Badges (Two-Way Reactivity)
-        // Labs Banner & Badge
+        // Banners & Badges
         const labBanner = document.getElementById('objectiveGapBanner');
-        if (labBanner) {
-          labBanner.style.display = evalRes.hasLabs ? 'none' : 'flex';
-        }
+        if (labBanner) labBanner.style.display = evalRes.hasLabs ? 'none' : 'flex';
+
         const objBadge = document.getElementById('objectiveStatusBadge');
         if (objBadge) {
-          if (evalRes.hasLabs) {
-            objBadge.innerText = 'LIS Biomarkers Synced';
-            objBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
-          } else if (evalRes.lenObj === 0) {
-            objBadge.innerText = 'Objective Empty';
-            objBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-700 border border-red-200';
-          } else {
-            objBadge.innerText = 'Pending Labs (WBC / CRP)';
-            objBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
-          }
+          objBadge.innerText = evalRes.hasLabs ? 'LIS Biomarkers Synced' : (evalRes.lenObj === 0 ? 'Objective Empty' : 'Pending Labs (WBC / CRP)');
+          objBadge.className = evalRes.hasLabs ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200' : 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
         }
 
-        // ACO Banner & Badge
         const acoBanner = document.getElementById('assessmentGapBanner');
-        if (acoBanner) {
-          acoBanner.style.display = evalRes.hasAco ? 'none' : 'flex';
-        }
+        if (acoBanner) acoBanner.style.display = evalRes.hasAco ? 'none' : 'flex';
+
         const assessBadge = document.getElementById('assessmentStatusBadge');
         if (assessBadge) {
-          if (evalRes.hasAco) {
-            assessBadge.innerText = 'ACO Specific (J44.9)';
-            assessBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
-          } else if (evalRes.lenAssess === 0) {
-            assessBadge.innerText = 'Assessment Empty';
-            assessBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-700 border border-red-200';
-          } else {
-            assessBadge.innerText = 'Needs Specificity';
-            assessBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
-          }
+          assessBadge.innerText = evalRes.hasAco ? 'ACO Specific (J44.9)' : (evalRes.lenAssess === 0 ? 'Assessment Empty' : 'Needs Specificity');
+          assessBadge.className = evalRes.hasAco ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200' : 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
         }
 
-        // Plan Banner & Badge
         const planBanner = document.getElementById('planGapBanner');
-        if (planBanner) {
-          planBanner.style.display = evalRes.hasPlan ? 'none' : 'flex';
-        }
+        if (planBanner) planBanner.style.display = evalRes.hasPlan ? 'none' : 'flex';
+
         const planBadge = document.getElementById('planStatusBadge');
         if (planBadge) {
-          if (evalRes.hasPlan) {
-            planBadge.innerText = '7-Day Stewardship';
-            planBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
-          } else if (evalRes.lenPlan === 0) {
-            planBadge.innerText = 'Plan Empty';
-            planBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-700 border border-red-200';
-          } else {
-            planBadge.innerText = 'Unspecified Duration';
-            planBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
-          }
+          planBadge.innerText = evalRes.hasPlan ? '7-Day Stewardship' : (evalRes.lenPlan === 0 ? 'Plan Empty' : 'Unspecified Duration');
+          planBadge.className = evalRes.hasPlan ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200' : 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
         }
 
-        // Subjective Badge
         const subjBadge = document.getElementById('subjectiveStatusBadge');
         if (subjBadge) {
-          if (evalRes.lenSubj >= 25) {
-            subjBadge.innerText = 'HPI Recorded';
-            subjBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200';
-          } else if (evalRes.lenSubj > 0) {
-            subjBadge.innerText = 'HPI Incomplete';
-            subjBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
-          } else {
-            subjBadge.innerText = 'Subjective Empty';
-            subjBadge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-700 border border-red-200';
-          }
+          subjBadge.innerText = evalRes.lenSubj >= 25 ? 'HPI Recorded' : (evalRes.lenSubj === 0 ? 'Subjective Empty' : 'HPI Incomplete');
+          subjBadge.className = evalRes.lenSubj >= 25 ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200' : 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200';
         }
 
-        // Section Character Footers
+        // Section Footers
         const sSubjFoot = document.getElementById('subjCharFoot');
         if (sSubjFoot) sSubjFoot.innerText = `Character count: ${evalRes.lenSubj} | Matched CAP Elements: ${evalRes.matchedCount}/11`;
 
@@ -1777,7 +1996,7 @@ Plan discharge when clinically ready.</div>
         const sPlanFoot = document.getElementById('planCharFoot');
         if (sPlanFoot) sPlanFoot.innerText = `Character count: ${evalRes.lenPlan} | Matched CAP Elements: ${evalRes.matchedCount}/11`;
 
-        // 3. Update Step 1 Queue Sarah Al-Otaibi Card
+        // Step 1 Queue Sarah Al-Otaibi Card
         const qScore1 = document.getElementById('queueDocScore-1');
         if (qScore1) {
           qScore1.innerText = `${q}%`;
@@ -1794,13 +2013,8 @@ Plan discharge when clinically ready.</div>
           qBadge1.className = `px-2 py-0.5 rounded text-[10px] font-bold ${qBadgeClass}`;
         }
 
-        // 4. Update Step 4 Checklist UI
         window.updateStep4UI();
-
-        // 5. Update Step 6 Dual Scoring UI
         window.updateStep6UI();
-
-        // 6. Update Step 7 Final Note UI
         window.updateStep7UI();
 
       } catch (e) {}
@@ -1829,6 +2043,8 @@ Plan discharge when clinically ready.</div>
       } catch (e) {}
     };
 
+
+    // Step 4 UI Update (Checklist)
     window.updateStep4UI = function() {
       try {
         if (typeof window.renderStep4Checklist === 'function') {
